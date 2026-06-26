@@ -1,5 +1,5 @@
-﻿/**
- * Visitor chat ??auto-provisioned shared storage (Telegraph API).
+/**
+ * Visitor chat — auto-provisioned shared storage (Telegraph API).
  * Re-run auto-setup-chat.ps1 to reset.
  */
 export const CHAT_CONFIG = {
