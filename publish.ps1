@@ -34,11 +34,18 @@ if ($status) {
     git commit -m "Prepare web deployment for GitHub Pages"
 }
 
-$remoteUrl = git remote get-url origin 2>$null
-if ($LASTEXITCODE -ne 0) {
+$hasOrigin = $false
+try {
+    $null = git remote get-url origin 2>$null
+    if ($LASTEXITCODE -eq 0) { $hasOrigin = $true }
+} catch {
+    $hasOrigin = $false
+}
+
+if (-not $hasOrigin) {
     Write-Host "Creating repo: $RepoName ($Visibility)" -ForegroundColor Cyan
     gh repo create $RepoName --$Visibility --source . --remote origin --push
-} else {
+} elseif ($hasOrigin) {
     Write-Host 'Pushing to existing remote origin...' -ForegroundColor Cyan
     git push -u origin main
 }
