@@ -1,0 +1,14 @@
+# Local server / portable build artifacts
+3D-Viewer-Portable/
+__pycache__/
+*.py[cod]
+local/__pycache__/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+desktop.ini
+*.log
+
+# Dev / test only
+test-dxf.html

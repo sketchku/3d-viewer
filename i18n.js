@@ -1,0 +1,497 @@
+export const LANGUAGES = [
+  { code: 'ko', label: '한국어' },
+  { code: 'en', label: 'English' },
+];
+
+const STRINGS = {
+  ko: {
+    pageTitle: '3D 파일 뷰어',
+    language: '언어',
+    openFileSection: '파일 열기',
+    dragOrClick: '파일을 드래그하거나 클릭',
+    openFileBtn: '파일 열기',
+    saveOriginal: '원본 저장',
+    saveOriginalTitle: '원본 파일 다른 이름으로 저장 (Ctrl+S)',
+    convertFormat: '형식 변환',
+    convertFormatTitle: '다른 형식으로 변환 저장 (Ctrl+Shift+S)',
+    threeView: '3면도',
+    threeViewTitle: '3면도 DXF 저장 (Ctrl+Shift+D)',
+    viewSettings: '뷰 설정',
+    gridPlane: '그리드 평면',
+    gridPlaneXY: 'XY 평면 (Z축 위)',
+    gridPlaneXZ: 'XZ 평면 (Y축 위)',
+    gridPlaneYZ: 'YZ 평면 (X축 위)',
+    grid: '그리드',
+    axes: '축 표시',
+    wireframe: '와이어프레임',
+    autoRotate: '자동 회전',
+    resetView: '뷰 초기화',
+    fitView: '맞춤 보기',
+    bgColor: '배경색',
+    modelColor: '모델 색상',
+    modelInfo: '모델 정보',
+    statVertices: '정점',
+    statTriangles: '삼각형',
+    statMeshes: '메시',
+    statSize: '크기 (mm)',
+    footerControls: '마우스: 회전 · 우클릭: 이동 · 휠: 확대/축소',
+    emptyTitle: '3D 모델을 불러오세요',
+    emptyDesc: 'STEP, STL, DXF, DWG 등 CAD/3D 파일을 지원합니다',
+    emptyHint: '클릭하여 파일 열기',
+    emptyTitleAttr: '클릭하여 파일 열기',
+    loadingFile: '파일 로딩 중...',
+    loadingTitle: '로딩 중',
+    loadingCancel: '취소',
+    loadingCancelled: '로딩이 취소되었습니다',
+    loadingCancelling: '취소 중...',
+    loadingStageParse: '파일 분석',
+    loadingStageMeshes: '메시 생성',
+    loadingStageEntities: '도면 요소',
+    loadingStageSimplify: '메시 최적화',
+    loadingStageConvert: '형식 변환',
+    loadingStageDrawing: '3면도 생성',
+    loadingStageEngine: 'CAD 엔진 초기화',
+    loadQuality: '로딩 품질',
+    loadQualityAuto: '자동 (권장)',
+    loadQualityFast: '빠른 미리보기',
+    loadQualityFull: '원본 품질',
+    loadingParse: '파일 분석 중...',
+    loadingMeshes: '메시 생성 중 ({current}/{total})',
+    loadingEntities: '도면 요소 로딩 중 ({current}/{total})',
+    loadingSimplify: '메시 최적화 중...',
+    largeFileFastMode: '대용량 파일 — 빠른 미리보기 모드로 로딩했습니다',
+    fileError: '파일 오류',
+    ok: '확인',
+    saveAsTitle: '다른 이름으로 저장',
+    saveAsSub: '원본 파일을 새 이름으로 저장합니다.',
+    cancel: '취소',
+    save: '저장',
+    drawingTitle: '3면도 저장',
+    drawingSub: 'Top / Front / Side 정투영 도면을 2D CAD 파일로 저장합니다.',
+    drawingTop: 'TOP VIEW — 평면도 (XY)',
+    drawingFront: 'FRONT VIEW — 정면도 (XZ)',
+    drawingSide: 'SIDE VIEW — 측면도 (YZ)',
+    fileName: '파일 이름',
+    saveFormat: '저장 형식',
+    drawingFormatDxf: 'DXF (AutoCAD / LibreCAD 호환)',
+    drawingNote: '※ DWG 바이너리는 브라우저에서 생성할 수 없습니다. DXF를 AutoCAD에서 열어 DWG로 저장하세요.',
+    saveDrawing: '3면도 저장',
+    exportTitle: '형식 변환 저장',
+    exportSub: '현재 모델을 다른 3D 형식으로 변환하여 저장합니다.',
+    convertFormatLabel: '변환 형식',
+    exportStl: 'STL (3D 프린팅)',
+    exportObj: 'OBJ (범용 메시)',
+    exportPly: 'PLY (점군/메시)',
+    exportGlb: 'GLB (웹 3D)',
+    exportGltf: 'GLTF (웹 3D JSON)',
+    exportNote: '※ STEP/STP/IGES 등 CAD 형식으로의 변환은 브라우저에서 지원되지 않습니다.',
+    convertSave: '변환 저장',
+    startupGuideTitle: '실행 방법 안내',
+    startupGuideMsg: 'index.html을 직접 열면 파일 열기가 작동하지 않을 수 있습니다.\n\nlocal\\start.bat을 실행한 뒤\nhttp://localhost:8080 으로 접속해 주세요.',
+    supportedFormatsWeb: '.stp .stl .3dm .obj .dxf .dwg · STEP/IGES/BREP',
+    supportedFormatsLocal: '.stp .stl .3dm .obj .dxf .dwg · SW/INV/F360/Creo/CATIA→STEP',
+    webDeployNotice: '웹 버전: SW/CATIA 등 독점 CAD 자동 변환은 로컬 서버에서만 지원됩니다.',
+    cadEngineInit: 'CAD 엔진 초기화 중...',
+    initErrorTitle: '초기화 오류',
+    initErrorUINotFound: '파일 입력 UI를 찾을 수 없습니다. 페이지를 새로고침해 주세요.',
+    fileErrorEmpty: '파일이 비어 있거나 읽을 수 없습니다.',
+    fileErrorNoExt: '파일 확장자를 확인할 수 없습니다.\n지원 형식: .stp, .step, .stl, .obj 등',
+    unsupportedFormat: '지원하지 않는 형식',
+    unsupportedFormatMsg: '"{ext}" 형식은 지원하지 않습니다.\n\n지원 형식:\n.stp .step .stl .obj .ply .glb .gltf .iges .igs .brep .3dm .dxf .dwg',
+    proprietaryCadTitle: '네이티브 CAD 파일',
+    autoConvertTitle: 'STEP 자동 변환',
+    autoConvertConfirm: '"{name}" ({label})은(는) 브라우저에서 직접 열 수 없습니다.\n\n설치된 CAD 프로그램으로 STEP(.stp)으로 자동 변환할까요?',
+    autoConvertConfirmManualOnly: '"{name}" ({label})은(는) 브라우저에서 직접 열 수 없습니다.\n\n이 형식은 현재 PC에서 자동 변환할 수 없습니다. 수동보내기 안내를 확인해 주세요.',
+    autoConvertBtn: 'STEP으로 자동 변환',
+    autoConvertNeedsFreecad: '.{ext} 파일 자동 변환에는 FreeCAD 설치가 필요합니다.',
+    autoConvertNeedsApp: '.{ext} 파일 자동 변환에 맞는 CAD 프로그램 또는 FreeCAD가 필요합니다.',
+    cadParseBlocking: '대용량 CAD 파싱 중입니다. 잠시만 기다려 주세요...',
+    autoConvertManual: '수동보내기 안내',
+    convertingToStep: '"{name}" STEP 변환 중...',
+    autoConvertSuccess: '"{name}" 변환 완료 — 로딩 중',
+    autoConvertFailed: 'STEP 변환 실패',
+    autoConvertUnavailableTitle: '자동 변환 불가',
+    autoConvertUnavailable: '.{ext} 파일을 열려면 STEP으로보내야 합니다.\n\n자동 변환을 사용하려면 SolidWorks, Inventor, CATIA 또는 FreeCAD가 설치되어 있어야 합니다.\n\nlocal\\start.bat으로 서버를 실행한 뒤 다시 시도하세요.',
+    autoConvertUnavailableWeb: '.{ext} 파일은 웹 버전에서 직접 열 수 없습니다.\n\nCAD 프로그램에서 STEP(.stp)으로보낸 뒤 업로드해 주세요.',
+    convertBackendsAvailable: '사용 가능한 변환기: {list}',
+    convertedFromFormat: '{format} (.{ext}에서 변환)',
+    backendSolidworks: 'SolidWorks',
+    backendInventor: 'Inventor',
+    backendCatia: 'CATIA',
+    backendFreecad: 'FreeCAD',
+    exportGuideSolidworks: 'SolidWorks 파일(.{ext})은 브라우저에서 직접 열 수 없습니다.\n\n아래 형식으로 보낸 뒤 다시 열어주세요:\n• STEP (.stp / .step) — 권장\n• STL (.stl)\n• IGES (.iges)\n\nSolidWorks: 파일 → 다른 이름으로 저장 → STEP AP214',
+    exportGuideInventor: 'Inventor 파일(.{ext})은 브라우저에서 직접 열 수 없습니다.\n\n아래 형식으로 보낸 뒤 다시 열어주세요:\n• STEP (.stp) — 권장\n• STL (.stl)\n\nInventor: 저장 → STEP 파일로 보내기',
+    exportGuideFusion360: 'Fusion 360 파일(.{ext})은 브라우저에서 직접 열 수 없습니다.\n\n아래 형식으로 보낸 뒤 다시 열어주세요:\n• STEP (.stp) — 권장\n• STL (.stl)\n\nFusion 360: 파일 → 보내기 → STEP / STL',
+    exportGuideCreo: 'Creo/ProE 파일(.{ext})은 브라우저에서 직접 열 수 없습니다.\n\n아래 형식으로 보낸 뒤 다시 열어주세요:\n• STEP (.stp) — 권장\n• STL (.stl)\n• IGES (.igs)\n\nCreo: 파일 → 저장 → STEP 또는 STL로 저장',
+    exportGuideCatia: 'CATIA 파일(.{ext})은 브라우저에서 직접 열 수 없습니다.\n\n아래 형식으로 보낸 뒤 다시 열어주세요:\n• STEP (.stp / .step) — 권장\n• STL (.stl)\n• IGES (.igs)\n\nCATIA: 파일 → 보내기 → STEP 또는 STL (또는 STEP AP214)',
+    rhino3dmLoadFailed: 'Rhino 3DM 파일을 불러오지 못했습니다.\n파일이 손상되었거나 지원하지 않는 버전일 수 있습니다.',
+    fileEmptyContent: '파일 내용이 비어 있습니다.',
+    noModelData: '파일에서 3D 모델 데이터를 찾을 수 없습니다.\n파일이 손상되었거나 형식이 올바르지 않을 수 있습니다.',
+    loadFailed: '파일 로드 실패',
+    unknownError: '알 수 없는 오류가 발생했습니다.',
+    cad2dModuleError: '2D CAD 모듈을 불러올 수 없습니다.\n인터넷 연결을 확인하고 페이지를 새로고침하세요.',
+    stepEngineNotReady: 'STEP/STP 엔진이 준비되지 않았습니다.\n인터넷 연결을 확인하고 페이지를 새로고침한 뒤 다시 시도하세요.',
+    cadParseFailed: 'CAD 파일 파싱에 실패했습니다.\n파일이 손상되었거나 지원하지 않는 STEP/STP 버전일 수 있습니다.',
+    cadNoGeometry: 'CAD 파일에 표시할 수 있는 형상 데이터가 없습니다.',
+    stlInvalid: 'STL 파일 형식이 올바르지 않습니다.\n바이너리 또는 ASCII STL 파일인지 확인해 주세요.',
+    stlNoVertices: 'STL 파일에 정점 데이터가 없습니다.',
+    objInvalid: 'OBJ 파일 형식이 올바르지 않습니다.',
+    plyInvalid: 'PLY 파일 형식이 올바르지 않습니다.',
+    gltfInvalid: 'GLTF/GLB 파일 형식이 올바르지 않거나 손상되었습니다.',
+    formatNotImplemented: '형식 .{ext}은(는) 아직 구현되지 않았습니다.',
+    saveUnavailable: '저장 불가',
+    saveNoFile: '저장할 파일이 없습니다. 먼저 3D 파일을 불러오세요.',
+    saveFailed: '저장 실패',
+    saveError: '파일 저장 중 오류가 발생했습니다.',
+    inputError: '입력 오류',
+    enterFilename: '파일 이름을 입력해 주세요.',
+    savedToast: '"{name}" 저장 완료',
+    noExportData: '변환할 3D 모델 데이터가 없습니다.',
+    exportUnavailable: '변환 불가',
+    exportNoModel: '변환할 모델이 없습니다. 먼저 3D 파일을 불러오세요.',
+    convertingFormat: '{format} 형식으로 변환 중...',
+    exportSavedToast: '"{name}" 변환 저장 완료',
+    exportFailed: '변환 저장 실패',
+    exportError: '형식 변환 중 오류가 발생했습니다.',
+    drawingUnavailable: '3면도 저장 불가',
+    generatingDrawing: '3면도 DXF 생성 중...',
+    drawingSavedToast: '"{name}" 3면도 저장 완료',
+    drawingFailed: '3면도 저장 실패',
+    drawingError: '도면 생성 중 오류가 발생했습니다.',
+    initFailed: '뷰어 초기화 중 오류가 발생했습니다.\nstart.bat으로 서버를 실행한 뒤 http://localhost:8080 으로 접속해 주세요.',
+    loadingFileNamed: '"{name}" 로딩 중...',
+    unsupportedExportFormat: '지원하지 않는 변환 형식: .{ext}',
+    dxfParserError: 'DXF parser 모듈을 불러올 수 없습니다.',
+    dxfParseFailed: 'DXF 파싱 실패: {msg}',
+    dxfNoEntities: 'DXF 파일에 표시할 엔티티가 없습니다.',
+    dxfNoShapes: 'DXF 파일에서 렌더링 가능한 도형을 찾을 수 없습니다.',
+    dwgReadFailed: 'DWG 파일을 읽을 수 없습니다.\n파일이 손상되었거나 지원하지 않는 버전일 수 있습니다.',
+    dwgExtractFailed: 'DWG 파일에서 도면 데이터를 추출할 수 없습니다.',
+    dwgNoShapes: 'DWG 파일에서 렌더링 가능한 도형을 찾을 수 없습니다.',
+    invalidFormat: '형식이 올바르지 않습니다.',
+    cadEngineTimeout: 'CAD 엔진 로드 시간 초과',
+    viewerTools: '뷰어 도구',
+    viewTop: '평면',
+    viewFront: '정면',
+    viewRight: '우측',
+    viewIso: '등각',
+    screenshot: '스크린샷 저장',
+    screenshotSaved: '스크린샷이 저장되었습니다',
+    measureMode: '치수 측정',
+    clearMeasure: '측정 지우기',
+    sectionView: '단면 보기',
+    sectionAxis: '단면 축',
+    sectionPos: '단면 위치',
+    axisX: 'X축',
+    axisY: 'Y축',
+    axisZ: 'Z축',
+    recentFiles: '최근 파일',
+    recentRemove: '목록에서 제거',
+    partTree: '파트 트리',
+    layerPanel: '레이어',
+    layerColor: '레이어 색상',
+    partDefault: '파트 {n}',
+    drawingScale: '축척',
+    drawingScaleAuto: '자동 (실제 크기)',
+    drawingScale11: '1:1',
+    drawingScale12: '1:2',
+    drawingScale21: '2:1',
+    drawingLayout: '투상 배치',
+    drawingLayoutThird: '제3각법 (KS/ISO)',
+    drawingLayoutFirst: '제1각법',
+    drawingIncludeDims: '치수선 포함',
+  },
+  en: {
+    pageTitle: '3D File Viewer',
+    language: 'Language',
+    openFileSection: 'Open File',
+    dragOrClick: 'Drag or click to open',
+    openFileBtn: 'Open File',
+    saveOriginal: 'Save Original',
+    saveOriginalTitle: 'Save original file as (Ctrl+S)',
+    convertFormat: 'Convert Format',
+    convertFormatTitle: 'Export in another format (Ctrl+Shift+S)',
+    threeView: '3-View Drawing',
+    threeViewTitle: 'Save 3-view DXF drawing (Ctrl+Shift+D)',
+    viewSettings: 'View Settings',
+    gridPlane: 'Grid Plane',
+    gridPlaneXY: 'XY Plane (Z-up)',
+    gridPlaneXZ: 'XZ Plane (Y-up)',
+    gridPlaneYZ: 'YZ Plane (X-up)',
+    grid: 'Grid',
+    axes: 'Show Axes',
+    wireframe: 'Wireframe',
+    autoRotate: 'Auto Rotate',
+    resetView: 'Reset View',
+    fitView: 'Fit to View',
+    bgColor: 'Background',
+    modelColor: 'Model Color',
+    modelInfo: 'Model Info',
+    statVertices: 'Vertices',
+    statTriangles: 'Triangles',
+    statMeshes: 'Meshes',
+    statSize: 'Size (mm)',
+    footerControls: 'Mouse: rotate · Right-click: pan · Wheel: zoom',
+    emptyTitle: 'Load a 3D Model',
+    emptyDesc: 'Supports STEP, STL, DXF, DWG and other CAD/3D files',
+    emptyHint: 'Click to open a file',
+    emptyTitleAttr: 'Click to open a file',
+    loadingFile: 'Loading file...',
+    loadingTitle: 'Loading',
+    loadingCancel: 'Cancel',
+    loadingCancelled: 'Loading cancelled',
+    loadingCancelling: 'Cancelling...',
+    loadingStageParse: 'Analyzing',
+    loadingStageMeshes: 'Building meshes',
+    loadingStageEntities: 'Drawing entities',
+    loadingStageSimplify: 'Optimizing mesh',
+    loadingStageConvert: 'Converting',
+    loadingStageDrawing: 'Generating drawing',
+    loadingStageEngine: 'Initializing CAD engine',
+    loadQuality: 'Load quality',
+    loadQualityAuto: 'Auto (recommended)',
+    loadQualityFast: 'Fast preview',
+    loadQualityFull: 'Full quality',
+    loadingParse: 'Analyzing file...',
+    loadingMeshes: 'Building meshes ({current}/{total})',
+    loadingEntities: 'Loading drawing entities ({current}/{total})',
+    loadingSimplify: 'Optimizing mesh...',
+    largeFileFastMode: 'Large file — loaded in fast preview mode',
+    fileError: 'File Error',
+    ok: 'OK',
+    saveAsTitle: 'Save As',
+    saveAsSub: 'Save the original file with a new name.',
+    cancel: 'Cancel',
+    save: 'Save',
+    drawingTitle: 'Save 3-View Drawing',
+    drawingSub: 'Save Top / Front / Side orthographic views as a 2D CAD file.',
+    drawingTop: 'TOP VIEW — Plan (XY)',
+    drawingFront: 'FRONT VIEW — Front (XZ)',
+    drawingSide: 'SIDE VIEW — Side (YZ)',
+    fileName: 'File Name',
+    saveFormat: 'Save Format',
+    drawingFormatDxf: 'DXF (AutoCAD / LibreCAD compatible)',
+    drawingNote: '※ DWG binary cannot be generated in the browser. Open the DXF in AutoCAD and save as DWG.',
+    saveDrawing: 'Save 3-View Drawing',
+    exportTitle: 'Convert & Save',
+    exportSub: 'Convert the current model to another 3D format and save.',
+    convertFormatLabel: 'Target Format',
+    exportStl: 'STL (3D Printing)',
+    exportObj: 'OBJ (Universal Mesh)',
+    exportPly: 'PLY (Point Cloud / Mesh)',
+    exportGlb: 'GLB (Web 3D)',
+    exportGltf: 'GLTF (Web 3D JSON)',
+    exportNote: '※ Conversion to STEP/STP/IGES and other CAD formats is not supported in the browser.',
+    convertSave: 'Convert & Save',
+    startupGuideTitle: 'How to Run',
+    startupGuideMsg: 'Opening index.html directly may prevent file open from working.\n\nRun local\\start.bat, then open\nhttp://localhost:8080',
+    supportedFormatsWeb: '.stp .stl .3dm .obj .dxf .dwg · STEP/IGES/BREP',
+    supportedFormatsLocal: '.stp .stl .3dm .obj .dxf .dwg · SW/INV/F360/Creo/CATIA→STEP',
+    webDeployNotice: 'Web edition: proprietary CAD auto-convert (SW/CATIA, etc.) requires the local server.',
+    cadEngineInit: 'Initializing CAD engine...',
+    initErrorTitle: 'Initialization Error',
+    initErrorUINotFound: 'File input UI not found. Please refresh the page.',
+    fileErrorEmpty: 'The file is empty or cannot be read.',
+    fileErrorNoExt: 'Cannot determine file extension.\nSupported: .stp, .step, .stl, .obj, etc.',
+    unsupportedFormat: 'Unsupported Format',
+    unsupportedFormatMsg: '".{ext}" is not supported.\n\nSupported formats:\n.stp .step .stl .obj .ply .glb .gltf .iges .igs .brep .3dm .dxf .dwg',
+    proprietaryCadTitle: 'Native CAD File',
+    autoConvertTitle: 'Auto-Convert to STEP',
+    autoConvertConfirm: '"{name}" ({label}) cannot be opened directly in the browser.\n\nConvert to STEP (.stp) using an installed CAD application?',
+    autoConvertConfirmManualOnly: '"{name}" ({label}) cannot be opened directly in the browser.\n\nAuto-convert is not available on this PC. See the manual export guide.',
+    autoConvertBtn: 'Auto-convert to STEP',
+    autoConvertNeedsFreecad: 'Auto-convert for .{ext} requires FreeCAD to be installed.',
+    autoConvertNeedsApp: 'Auto-convert for .{ext} requires the matching CAD app or FreeCAD.',
+    cadParseBlocking: 'Parsing large CAD file. Please wait...',
+    autoConvertManual: 'Manual export guide',
+    convertingToStep: 'Converting "{name}" to STEP...',
+    autoConvertSuccess: '"{name}" converted — loading',
+    autoConvertFailed: 'STEP conversion failed',
+    autoConvertUnavailableTitle: 'Auto-convert unavailable',
+    autoConvertUnavailable: 'To open .{ext} files, export them as STEP first.\n\nAuto-convert requires SolidWorks, Inventor, CATIA, or FreeCAD to be installed.\n\nRun local\\start.bat to start the server, then try again.',
+    autoConvertUnavailableWeb: '".{ext}" files cannot be opened in the web edition.\n\nExport as STEP (.stp) from your CAD app, then upload.',
+    convertBackendsAvailable: 'Available converters: {list}',
+    convertedFromFormat: '{format} (converted from .{ext})',
+    backendSolidworks: 'SolidWorks',
+    backendInventor: 'Inventor',
+    backendCatia: 'CATIA',
+    backendFreecad: 'FreeCAD',
+    exportGuideSolidworks: 'SolidWorks files (.{ext}) cannot be opened directly in the browser.\n\nPlease export as:\n• STEP (.stp / .step) — recommended\n• STL (.stl)\n• IGES (.iges)\n\nSolidWorks: File → Save As → STEP AP214',
+    exportGuideInventor: 'Inventor files (.{ext}) cannot be opened directly in the browser.\n\nPlease export as:\n• STEP (.stp) — recommended\n• STL (.stl)\n\nInventor: Save → Export to STEP',
+    exportGuideFusion360: 'Fusion 360 files (.{ext}) cannot be opened directly in the browser.\n\nPlease export as:\n• STEP (.stp) — recommended\n• STL (.stl)\n\nFusion 360: File → Export → STEP / STL',
+    exportGuideCreo: 'Creo/ProE files (.{ext}) cannot be opened directly in the browser.\n\nPlease export as:\n• STEP (.stp) — recommended\n• STL (.stl)\n• IGES (.igs)\n\nCreo: File → Save → Save as STEP or STL',
+    exportGuideCatia: 'CATIA files (.{ext}) cannot be opened directly in the browser.\n\nPlease export as:\n• STEP (.stp / .step) — recommended\n• STL (.stl)\n• IGES (.igs)\n\nCATIA: File → Export → STEP or STL (STEP AP214)',
+    rhino3dmLoadFailed: 'Failed to load Rhino 3DM file.\nThe file may be corrupted or an unsupported version.',
+    fileEmptyContent: 'File content is empty.',
+    noModelData: 'No 3D model data found in file.\nThe file may be corrupted or in an invalid format.',
+    loadFailed: 'Failed to Load File',
+    unknownError: 'An unknown error occurred.',
+    cad2dModuleError: 'Cannot load 2D CAD module.\nCheck your internet connection and refresh the page.',
+    stepEngineNotReady: 'STEP/STP engine is not ready.\nCheck your internet connection, refresh, and try again.',
+    cadParseFailed: 'Failed to parse CAD file.\nThe file may be corrupted or an unsupported STEP/STP version.',
+    cadNoGeometry: 'CAD file contains no displayable geometry.',
+    stlInvalid: 'Invalid STL format.\nPlease verify it is a binary or ASCII STL file.',
+    stlNoVertices: 'STL file contains no vertex data.',
+    objInvalid: 'Invalid OBJ file format.',
+    plyInvalid: 'Invalid PLY file format.',
+    gltfInvalid: 'Invalid or corrupted GLTF/GLB file.',
+    formatNotImplemented: 'Format .{ext} is not yet implemented.',
+    saveUnavailable: 'Cannot Save',
+    saveNoFile: 'No file to save. Please load a 3D file first.',
+    saveFailed: 'Save Failed',
+    saveError: 'An error occurred while saving the file.',
+    inputError: 'Input Error',
+    enterFilename: 'Please enter a file name.',
+    savedToast: '"{name}" saved successfully',
+    noExportData: 'No 3D model data to convert.',
+    exportUnavailable: 'Cannot Convert',
+    exportNoModel: 'No model to convert. Please load a 3D file first.',
+    convertingFormat: 'Converting to {format}...',
+    exportSavedToast: '"{name}" converted and saved',
+    exportFailed: 'Conversion Failed',
+    exportError: 'An error occurred during format conversion.',
+    drawingUnavailable: 'Cannot Save Drawing',
+    generatingDrawing: 'Generating 3-view DXF...',
+    drawingSavedToast: '"{name}" 3-view drawing saved',
+    drawingFailed: 'Drawing Save Failed',
+    drawingError: 'An error occurred while generating the drawing.',
+    initFailed: 'An error occurred during viewer initialization.\nRun start.bat and open http://localhost:8080',
+    loadingFileNamed: 'Loading "{name}"...',
+    unsupportedExportFormat: 'Unsupported export format: .{ext}',
+    dxfParserError: 'Cannot load DXF parser module.',
+    dxfParseFailed: 'DXF parse failed: {msg}',
+    dxfNoEntities: 'DXF file contains no displayable entities.',
+    dxfNoShapes: 'No renderable shapes found in DXF file.',
+    dwgReadFailed: 'Cannot read DWG file.\nThe file may be corrupted or an unsupported version.',
+    dwgExtractFailed: 'Cannot extract drawing data from DWG file.',
+    dwgNoShapes: 'No renderable shapes found in DWG file.',
+    invalidFormat: 'Invalid format.',
+    cadEngineTimeout: 'CAD engine load timeout',
+    viewerTools: 'Viewer Tools',
+    viewTop: 'Top',
+    viewFront: 'Front',
+    viewRight: 'Right',
+    viewIso: 'Iso',
+    screenshot: 'Save Screenshot',
+    screenshotSaved: 'Screenshot saved',
+    measureMode: 'Measure',
+    clearMeasure: 'Clear Measurements',
+    sectionView: 'Section View',
+    sectionAxis: 'Section Axis',
+    sectionPos: 'Section Position',
+    axisX: 'X Axis',
+    axisY: 'Y Axis',
+    axisZ: 'Z Axis',
+    recentFiles: 'Recent Files',
+    recentRemove: 'Remove from list',
+    partTree: 'Part Tree',
+    layerPanel: 'Layers',
+    layerColor: 'Layer color',
+    partDefault: 'Part {n}',
+    drawingScale: 'Scale',
+    drawingScaleAuto: 'Auto (actual size)',
+    drawingScale11: '1:1',
+    drawingScale12: '1:2',
+    drawingScale21: '2:1',
+    drawingLayout: 'Projection Layout',
+    drawingLayoutThird: 'Third-angle (KS/ISO)',
+    drawingLayoutFirst: 'First-angle',
+    drawingIncludeDims: 'Include dimensions',
+  },
+};
+
+const STORAGE_KEY = '3d-viewer-lang';
+
+let currentLang = 'ko';
+
+function detectLanguage() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved && STRINGS[saved]) return saved;
+  } catch (_) { /* file:// or private mode */ }
+  const browser = (navigator.language || 'en').toLowerCase();
+  if (browser.startsWith('ko')) return 'ko';
+  return 'en';
+}
+
+export function getLanguage() {
+  return currentLang;
+}
+
+export function t(key, params = {}) {
+  let str = STRINGS[currentLang]?.[key] ?? STRINGS.en[key] ?? key;
+  for (const [k, v] of Object.entries(params)) {
+    str = str.split(`{${k}}`).join(String(v));
+  }
+  return str;
+}
+
+export function applyTranslations() {
+  document.title = t('pageTitle');
+  document.documentElement.lang = currentLang;
+  document.documentElement.setAttribute('translate', 'no');
+
+  document.querySelectorAll('[data-i18n]').forEach((el) => {
+    const key = el.dataset.i18n;
+    if (!key) return;
+    if (el.id === 'alert-title' && !el.closest('.modal')?.classList.contains('hidden')) return;
+    const text = t(key);
+    if (el.tagName === 'OPTION') {
+      el.text = text;
+    } else {
+      el.textContent = text;
+    }
+  });
+  document.querySelectorAll('[data-i18n-title]').forEach((el) => {
+    el.title = t(el.dataset.i18nTitle);
+  });
+  document.querySelectorAll('[data-i18n-placeholder]').forEach((el) => {
+    el.placeholder = t(el.dataset.i18nPlaceholder);
+  });
+
+  const select = document.getElementById('lang-select');
+  if (select && select.value !== currentLang) select.value = currentLang;
+}
+
+export function setLanguage(code) {
+  if (!STRINGS[code]) return;
+  currentLang = code;
+  try {
+    localStorage.setItem(STORAGE_KEY, code);
+  } catch (_) { /* ignore */ }
+  applyTranslations();
+  document.dispatchEvent(new CustomEvent('languagechange', { detail: { lang: code } }));
+}
+
+let i18nReady = false;
+let listenerBound = false;
+
+function bindLanguageSelect() {
+  const select = document.getElementById('lang-select');
+  if (!select) return false;
+  if (!listenerBound) {
+    listenerBound = true;
+    select.addEventListener('change', (e) => {
+      if (e.target.value !== currentLang) setLanguage(e.target.value);
+    });
+  }
+  if (select.value !== currentLang) select.value = currentLang;
+  return true;
+}
+
+function bootI18n() {
+  if (!i18nReady) {
+    i18nReady = true;
+    currentLang = detectLanguage();
+  }
+  applyTranslations();
+  bindLanguageSelect();
+}
+
+export function initI18n() {
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bootI18n, { once: true });
+    return;
+  }
+  bootI18n();
+}

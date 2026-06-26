@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="ko" translate="no" data-deployment="web">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>3D 파일 뷰어</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+    }
+  }
+  </script>
+</head>
+<body>
+  <div id="app">
+    <aside class="sidebar">
+      <header class="sidebar-header">
+        <div class="logo">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+            <path d="M2 17l10 5 10-5"/>
+            <path d="M2 12l10 5 10-5"/>
+          </svg>
+          <div>
+            <h1>3D Viewer</h1>
+            <p>STEP · STL · 3DM · DXF · DWG</p>
+          </div>
+        </div>
+        <div class="lang-select-group">
+          <label for="lang-select" data-i18n="language">언어</label>
+          <select id="lang-select" class="select-input lang-select">
+            <option value="ko">한국어</option>
+            <option value="en">English</option>
+          </select>
+        </div>
+      </header>
+
+      <section class="panel">
+        <h2 data-i18n="openFileSection">파일 열기</h2>
+        <p id="web-deploy-notice" class="web-deploy-notice hidden" data-i18n="webDeployNotice">웹 버전: SW/CATIA 등 독점 CAD 자동 변환은 로컬 서버에서만 지원됩니다.</p>
+        <label id="drop-zone" class="drop-zone" for="file-input">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+          <p data-i18n="dragOrClick">파일을 드래그하거나 클릭</p>
+          <span id="supported-formats" class="formats" data-i18n="supportedFormatsWeb">.stp .stl .3dm .obj .dxf .dwg · STEP/IGES/BREP</span>
+        </label>
+        <input type="file" id="file-input" class="file-input-hidden" accept=".stp,.step,.stl,.obj,.ply,.glb,.gltf,.iges,.igs,.brep,.brp,.3dm,.dxf,.dwg,.sldprt,.sldasm,.slddrw,.ipt,.iam,.ipn,.f3d,.f3z,.prt,.asm,.drw,.catpart,.catproduct,.catdrawing,.cgr,.model" />
+        <button type="button" id="btn-open-file" class="btn btn-open" data-i18n="openFileBtn">파일 열기</button>
+        <section id="recent-files-panel" class="recent-files hidden">
+          <h3 data-i18n="recentFiles">최근 파일</h3>
+          <div id="recent-files-list" class="recent-files-list"></div>
+        </section>
+        <div id="file-info" class="file-info hidden">
+          <div class="file-info-text">
+            <span class="file-name" id="file-name">—</span>
+            <span class="file-format" id="file-format">—</span>
+          </div>
+          <div class="file-actions">
+            <button id="btn-save-as" class="btn btn-save" data-i18n-title="saveOriginalTitle" title="원본 파일 다른 이름으로 저장 (Ctrl+S)" disabled>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+                <polyline points="17 21 17 13 7 13 7 21"/>
+                <polyline points="7 3 7 8 15 8"/>
+              </svg>
+              <span data-i18n="saveOriginal">원본 저장</span>
+            </button>
+            <button id="btn-export" class="btn btn-save btn-export" data-i18n-title="convertFormatTitle" title="다른 형식으로 변환 저장 (Ctrl+Shift+S)" disabled>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="16 3 21 3 21 8"/>
+                <line x1="4" y1="20" x2="21" y2="3"/>
+                <path d="M21 16v5h-5"/>
+                <path d="M15 15l6 6"/>
+              </svg>
+              <span data-i18n="convertFormat">형식 변환</span>
+            </button>
+            <button id="btn-drawing" class="btn btn-save btn-drawing" data-i18n-title="threeViewTitle" title="3면도 DXF 저장 (Ctrl+Shift+D)" disabled>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="7" height="7"/>
+                <rect x="14" y="3" width="7" height="7"/>
+                <rect x="3" y="14" width="7" height="7"/>
+                <path d="M14 17h7"/>
+                <path d="M17.5 14v6"/>
+              </svg>
+              <span data-i18n="threeView">3면도</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2 data-i18n="viewSettings">뷰 설정</h2>
+        <div class="select-group">
+          <label for="load-quality" data-i18n="loadQuality">로딩 품질</label>
+          <select id="load-quality" class="select-input">
+            <option value="auto" selected data-i18n="loadQualityAuto">자동 (권장)</option>
+            <option value="fast" data-i18n="loadQualityFast">빠른 미리보기</option>
+            <option value="full" data-i18n="loadQualityFull">원본 품질</option>
+          </select>
+        </div>
+        <div class="select-group">
+          <label for="grid-plane" data-i18n="gridPlane">그리드 평면</label>
+          <select id="grid-plane" class="select-input">
+            <option value="xy" selected data-i18n="gridPlaneXY">XY 평면 (Z축 위)</option>
+            <option value="xz" data-i18n="gridPlaneXZ">XZ 평면 (Y축 위)</option>
+            <option value="yz" data-i18n="gridPlaneYZ">YZ 평면 (X축 위)</option>
+          </select>
+        </div>
+        <div class="controls-grid">
+          <label class="toggle">
+            <input type="checkbox" id="toggle-grid" checked />
+            <span data-i18n="grid">그리드</span>
+          </label>
+          <label class="toggle">
+            <input type="checkbox" id="toggle-axes" checked />
+            <span data-i18n="axes">축 표시</span>
+          </label>
+          <label class="toggle">
+            <input type="checkbox" id="toggle-wireframe" />
+            <span data-i18n="wireframe">와이어프레임</span>
+          </label>
+          <label class="toggle">
+            <input type="checkbox" id="toggle-auto-rotate" />
+            <span data-i18n="autoRotate">자동 회전</span>
+          </label>
+        </div>
+        <div class="btn-row">
+          <button id="btn-reset-view" class="btn" data-i18n="resetView">뷰 초기화</button>
+          <button id="btn-fit" class="btn" data-i18n="fitView">맞춤 보기</button>
+        </div>
+        <div class="slider-group">
+          <label for="bg-color" data-i18n="bgColor">배경색</label>
+          <input type="color" id="bg-color" value="#1a1d23" />
+        </div>
+        <div class="slider-group">
+          <label for="model-color" data-i18n="modelColor">모델 색상</label>
+          <input type="color" id="model-color" value="#6b9bd1" />
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2 data-i18n="viewerTools">뷰어 도구</h2>
+        <div class="view-btn-grid">
+          <button type="button" id="btn-view-top" class="btn btn-sm" data-i18n="viewTop">평면</button>
+          <button type="button" id="btn-view-front" class="btn btn-sm" data-i18n="viewFront">정면</button>
+          <button type="button" id="btn-view-right" class="btn btn-sm" data-i18n="viewRight">우측</button>
+          <button type="button" id="btn-view-iso" class="btn btn-sm" data-i18n="viewIso">등각</button>
+        </div>
+        <button type="button" id="btn-screenshot" class="btn btn-sm btn-block" data-i18n="screenshot">스크린샷 저장</button>
+        <div class="controls-grid">
+          <label class="toggle">
+            <input type="checkbox" id="toggle-measure" />
+            <span data-i18n="measureMode">치수 측정</span>
+          </label>
+          <label class="toggle">
+            <input type="checkbox" id="toggle-section" />
+            <span data-i18n="sectionView">단면 보기</span>
+          </label>
+        </div>
+        <button type="button" id="btn-clear-measure" class="btn btn-sm btn-block" data-i18n="clearMeasure">측정 지우기</button>
+        <div id="section-controls" class="section-controls hidden">
+          <div class="select-group">
+            <label for="section-axis" data-i18n="sectionAxis">단면 축</label>
+            <select id="section-axis" class="select-input">
+              <option value="x" data-i18n="axisX">X축</option>
+              <option value="y" data-i18n="axisY">Y축</option>
+              <option value="z" selected data-i18n="axisZ">Z축</option>
+            </select>
+          </div>
+          <div class="slider-group">
+            <label for="section-pos"><span data-i18n="sectionPos">단면 위치</span> <span id="section-pos-val">0</span></label>
+            <input type="range" id="section-pos" min="0" max="100" value="50" />
+          </div>
+        </div>
+      </section>
+
+      <section id="tree-panel" class="panel hidden">
+        <h2 id="tree-panel-title" data-i18n="partTree">파트 트리</h2>
+        <div id="tree-list" class="tree-list"></div>
+      </section>
+
+      <section class="panel">
+        <h2 data-i18n="modelInfo">모델 정보</h2>
+        <dl class="stats" id="stats">
+          <div><dt data-i18n="statVertices">정점</dt><dd id="stat-vertices">—</dd></div>
+          <div><dt data-i18n="statTriangles">삼각형</dt><dd id="stat-triangles">—</dd></div>
+          <div><dt data-i18n="statMeshes">메시</dt><dd id="stat-meshes">—</dd></div>
+          <div><dt data-i18n="statSize">크기 (mm)</dt><dd id="stat-size">—</dd></div>
+        </dl>
+      </section>
+
+      <footer class="sidebar-footer">
+        <p data-i18n="footerControls">마우스: 회전 · 우클릭: 이동 · 휠: 확대/축소</p>
+      </footer>
+    </aside>
+
+    <main class="viewport">
+      <canvas id="bg-pixels" aria-hidden="true"></canvas>
+      <canvas id="canvas"></canvas>
+      <div id="empty-state" class="empty-state">
+        <div class="empty-icon">
+          <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+            <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+            <line x1="12" y1="22.08" x2="12" y2="12"/>
+          </svg>
+        </div>
+        <h2 class="empty-open-trigger" data-i18n="emptyTitle" data-i18n-title="emptyTitleAttr" title="클릭하여 파일 열기">3D 모델을 불러오세요</h2>
+        <p class="empty-open-trigger" data-i18n="emptyDesc" data-i18n-title="emptyTitleAttr" title="클릭하여 파일 열기">STEP, STL, DXF, DWG 등 CAD/3D 파일을 지원합니다</p>
+        <span class="empty-hint empty-open-trigger" data-i18n="emptyHint" data-i18n-title="emptyTitleAttr" title="클릭하여 파일 열기">클릭하여 파일 열기</span>
+      </div>
+      <div id="toast" class="toast hidden"></div>
+    </main>
+
+    <div id="loading" class="loading-screen hidden" aria-live="polite" aria-busy="false">
+      <div class="loading-card">
+        <div class="loading-spinner-wrap">
+          <div class="spinner"></div>
+        </div>
+        <h3 class="loading-title" data-i18n="loadingTitle">로딩 중</h3>
+        <p id="loading-text" class="loading-message" data-i18n="loadingFile">파일 로딩 중...</p>
+        <p id="loading-filename" class="loading-filename hidden"></p>
+        <div class="loading-progress-wrap">
+          <div class="loading-progress">
+            <div id="loading-progress-indeterminate" class="loading-progress-indeterminate"></div>
+            <div id="loading-progress-bar" class="loading-progress-bar"></div>
+          </div>
+          <span id="loading-percent" class="loading-percent">...</span>
+        </div>
+        <p id="loading-stage" class="loading-stage"></p>
+        <button type="button" id="loading-cancel" class="btn loading-cancel hidden" data-i18n="loadingCancel">취소</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 자동 변환 확인 모달 -->
+  <div id="convert-modal" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-backdrop"></div>
+    <div class="modal-box modal-box-wide">
+      <div class="modal-icon convert-icon">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="17 8 12 3 7 8"/>
+          <line x1="12" y1="3" x2="12" y2="15"/>
+        </svg>
+      </div>
+      <h3 id="convert-title" class="modal-title" data-i18n="autoConvertTitle">STEP 자동 변환</h3>
+      <p id="convert-message" class="modal-message"></p>
+      <p id="convert-backends" class="convert-backends hidden"></p>
+      <div class="modal-actions modal-actions-stack">
+        <button id="convert-auto" class="btn btn-primary" data-i18n="autoConvertBtn">STEP으로 자동 변환</button>
+        <button id="convert-manual" class="btn" data-i18n="autoConvertManual">수동보내기 안내</button>
+        <button id="convert-cancel" class="btn" data-i18n="cancel">취소</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 알림 모달 -->
+  <div id="alert-modal" class="modal hidden" role="alertdialog" aria-modal="true">
+    <div class="modal-backdrop"></div>
+    <div class="modal-box">
+      <div class="modal-icon alert-icon">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="8" x2="12" y2="12"/>
+          <line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+      </div>
+      <h3 id="alert-title" class="modal-title">파일 오류</h3>
+      <p id="alert-message" class="modal-message"></p>
+      <button id="alert-ok" class="btn btn-primary modal-btn" data-i18n="ok">확인</button>
+    </div>
+  </div>
+
+  <!-- 원본 저장 모달 -->
+  <div id="save-modal" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-backdrop"></div>
+    <div class="modal-box">
+      <h3 class="modal-title" data-i18n="saveAsTitle">다른 이름으로 저장</h3>
+      <p class="modal-sub" data-i18n="saveAsSub">원본 파일을 새 이름으로 저장합니다.</p>
+      <input type="text" id="save-filename" class="modal-input" />
+      <div class="modal-actions">
+        <button id="save-cancel" class="btn" data-i18n="cancel">취소</button>
+        <button id="save-confirm" class="btn btn-primary" data-i18n="save">저장</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3면도 저장 모달 -->
+  <div id="drawing-modal" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-backdrop"></div>
+    <div class="modal-box modal-box-wide">
+      <h3 class="modal-title" data-i18n="drawingTitle">3면도 저장</h3>
+      <p class="modal-sub" data-i18n="drawingSub">Top / Front / Side 정투영 도면을 2D CAD 파일로 저장합니다.</p>
+      <div class="drawing-preview-info">
+        <div class="drawing-view-tag top" data-i18n="drawingTop">TOP VIEW — 평면도 (XY)</div>
+        <div class="drawing-view-tag front" data-i18n="drawingFront">FRONT VIEW — 정면도 (XZ)</div>
+        <div class="drawing-view-tag side" data-i18n="drawingSide">SIDE VIEW — 측면도 (YZ)</div>
+      </div>
+      <div class="modal-field">
+        <label for="drawing-filename" data-i18n="fileName">파일 이름</label>
+        <input type="text" id="drawing-filename" class="modal-input" />
+      </div>
+      <div class="modal-field">
+        <label for="drawing-format" data-i18n="saveFormat">저장 형식</label>
+        <select id="drawing-format" class="select-input">
+          <option value="dxf" selected data-i18n="drawingFormatDxf">DXF (AutoCAD / LibreCAD 호환)</option>
+        </select>
+      </div>
+      <div class="modal-field">
+        <label for="drawing-scale" data-i18n="drawingScale">축척</label>
+        <select id="drawing-scale" class="select-input">
+          <option value="auto" selected data-i18n="drawingScaleAuto">자동 (실제 크기)</option>
+          <option value="1:1" data-i18n="drawingScale11">1:1</option>
+          <option value="1:2" data-i18n="drawingScale12">1:2</option>
+          <option value="2:1" data-i18n="drawingScale21">2:1</option>
+        </select>
+      </div>
+      <div class="modal-field">
+        <label for="drawing-layout" data-i18n="drawingLayout">투상 배치</label>
+        <select id="drawing-layout" class="select-input">
+          <option value="third-angle" selected data-i18n="drawingLayoutThird">제3각법 (KS/ISO)</option>
+          <option value="first-angle" data-i18n="drawingLayoutFirst">제1각법</option>
+        </select>
+      </div>
+      <label class="toggle modal-toggle">
+        <input type="checkbox" id="drawing-dimensions" checked />
+        <span data-i18n="drawingIncludeDims">치수선 포함</span>
+      </label>
+      <p class="modal-note" data-i18n="drawingNote">※ DWG 바이너리는 브라우저에서 생성할 수 없습니다. DXF를 AutoCAD에서 열어 DWG로 저장하세요.</p>
+      <div class="modal-actions">
+        <button id="drawing-cancel" class="btn" data-i18n="cancel">취소</button>
+        <button id="drawing-confirm" class="btn btn-primary" data-i18n="saveDrawing">3면도 저장</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 형식 변환 저장 모달 -->
+  <div id="export-modal" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-backdrop"></div>
+    <div class="modal-box modal-box-wide">
+      <h3 class="modal-title" data-i18n="exportTitle">형식 변환 저장</h3>
+      <p class="modal-sub" data-i18n="exportSub">현재 모델을 다른 3D 형식으로 변환하여 저장합니다.</p>
+      <div class="modal-field">
+        <label for="export-filename" data-i18n="fileName">파일 이름</label>
+        <input type="text" id="export-filename" class="modal-input" />
+      </div>
+      <div class="modal-field">
+        <label for="export-format" data-i18n="convertFormatLabel">변환 형식</label>
+        <select id="export-format" class="select-input">
+          <option value="stl" data-i18n="exportStl">STL (3D 프린팅)</option>
+          <option value="obj" data-i18n="exportObj">OBJ (범용 메시)</option>
+          <option value="ply" data-i18n="exportPly">PLY (점군/메시)</option>
+          <option value="glb" data-i18n="exportGlb">GLB (웹 3D)</option>
+          <option value="gltf" data-i18n="exportGltf">GLTF (웹 3D JSON)</option>
+        </select>
+      </div>
+      <p class="modal-note" data-i18n="exportNote">※ STEP/STP/IGES 등 CAD 형식으로의 변환은 브라우저에서 지원되지 않습니다.</p>
+      <div class="modal-actions">
+        <button id="export-cancel" class="btn" data-i18n="cancel">취소</button>
+        <button id="export-confirm" class="btn btn-primary" data-i18n="convertSave">변환 저장</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/occt-import-js@0.0.23/dist/occt-import-js.js"></script>
+  <script type="module" src="i18n-boot.js?v=2.4.1"></script>
+  <script type="module" src="app.js?v=2.4.1"></script>
+</body>
+</html>
