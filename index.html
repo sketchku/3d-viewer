@@ -162,6 +162,24 @@
             <span data-i18n="sectionView">단면 보기</span>
           </label>
         </div>
+        <div id="measure-controls" class="measure-controls hidden">
+          <div class="select-group">
+            <label for="measure-type" data-i18n="measureType">측정 방식</label>
+            <select id="measure-type" class="select-input">
+              <option value="direct" data-i18n="measureDirect">직선 거리</option>
+              <option value="vertical" data-i18n="measureVertical">수직 거리 (Z)</option>
+            </select>
+          </div>
+          <div id="measure-result" class="measure-result hidden">
+            <p class="measure-result-title" data-i18n="measureResult">측정 결과</p>
+            <dl class="measure-result-stats">
+              <div><dt data-i18n="measurePrimary">거리</dt><dd id="measure-val-primary">—</dd></div>
+              <div><dt data-i18n="measureDeltaX">ΔX</dt><dd id="measure-val-dx">—</dd></div>
+              <div><dt data-i18n="measureDeltaY">ΔY</dt><dd id="measure-val-dy">—</dd></div>
+              <div><dt data-i18n="measureDeltaZ">ΔZ</dt><dd id="measure-val-dz">—</dd></div>
+            </dl>
+          </div>
+        </div>
         <button type="button" id="btn-clear-measure" class="btn btn-sm btn-block" data-i18n="clearMeasure">측정 지우기</button>
         <div id="section-controls" class="section-controls hidden">
           <div class="select-group">

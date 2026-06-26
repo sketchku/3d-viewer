@@ -16,6 +16,7 @@ export function initViewerFeatures(ctx) {
   scene.add(measureGroup);
 
   let measureMode = false;
+  let measureType = 'direct';
   let measurePoints = [];
   let sectionEnabled = false;
   let sectionAxis = 'z';
@@ -109,6 +110,44 @@ export function initViewerFeatures(ctx) {
       });
     }
     measurePoints = [];
+    document.getElementById('measure-result')?.classList.add('hidden');
+  }
+
+  function computeMeasure(a, b) {
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const dz = b.z - a.z;
+    return {
+      dx,
+      dy,
+      dz,
+      direct: a.distanceTo(b),
+      vertical: Math.abs(dz),
+    };
+  }
+
+  function formatMm(value) {
+    return `${value.toFixed(2)} mm`;
+  }
+
+  function updateMeasureResultPanel(data) {
+    const panel = document.getElementById('measure-result');
+    const primaryEl = document.getElementById('measure-val-primary');
+    const dxEl = document.getElementById('measure-val-dx');
+    const dyEl = document.getElementById('measure-val-dy');
+    const dzEl = document.getElementById('measure-val-dz');
+    const primaryLabel = panel?.querySelector('[data-i18n="measurePrimary"]');
+    if (!panel || !primaryEl || !dxEl || !dyEl || !dzEl) return;
+
+    const isVertical = measureType === 'vertical';
+    if (primaryLabel) {
+      primaryLabel.textContent = isVertical ? t('measurePrimaryVertical') : t('measurePrimary');
+    }
+    primaryEl.textContent = formatMm(isVertical ? data.vertical : data.direct);
+    dxEl.textContent = formatMm(data.dx);
+    dyEl.textContent = formatMm(data.dy);
+    dzEl.textContent = formatMm(data.dz);
+    panel.classList.remove('hidden');
   }
 
   function addMarker(point) {
@@ -121,38 +160,40 @@ export function initViewerFeatures(ctx) {
     return mesh;
   }
 
-  function addMeasureLine(a, b, dist) {
+  function addLine(a, b, color = 0xffcc00, opacity = 1) {
     const positions = [a.x, a.y, a.z, b.x, b.y, b.z];
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
     const line = new THREE.Line(
       geo,
-      new THREE.LineBasicMaterial({ color: 0xffcc00, depthTest: false }),
+      new THREE.LineBasicMaterial({ color, transparent: opacity < 1, opacity, depthTest: false }),
     );
     line.renderOrder = 998;
     measureGroup.add(line);
-
-    const mid = a.clone().add(b).multiplyScalar(0.5);
-    const label = createMeasureLabel(`${dist.toFixed(2)} mm`, mid);
-    measureGroup.add(label);
+    return line;
   }
 
-  function createMeasureLabel(text, position) {
-    const size = getModelSize() * 0.04;
+  function addMeasureLabel(lines, position) {
+    const text = Array.isArray(lines) ? lines.join('\n') : String(lines);
+    const size = getModelSize() * 0.045;
     const canvas = document.createElement('canvas');
     const ctx2d = canvas.getContext('2d');
-    const px = 48;
+    const px = 36;
+    const lineHeight = px + 6;
+    const rows = text.split('\n');
     ctx2d.font = `bold ${px}px Arial, sans-serif`;
-    const w = ctx2d.measureText(text).width + 16;
+    const w = Math.max(...rows.map((row) => ctx2d.measureText(row).width)) + 20;
     canvas.width = w;
-    canvas.height = px + 12;
+    canvas.height = lineHeight * rows.length + 8;
     ctx2d.font = `bold ${px}px Arial, sans-serif`;
-    ctx2d.fillStyle = 'rgba(15,17,23,0.85)';
+    ctx2d.fillStyle = 'rgba(15,17,23,0.88)';
     ctx2d.fillRect(0, 0, canvas.width, canvas.height);
     ctx2d.fillStyle = '#ffcc00';
     ctx2d.textAlign = 'center';
     ctx2d.textBaseline = 'middle';
-    ctx2d.fillText(text, canvas.width / 2, canvas.height / 2);
+    rows.forEach((row, i) => {
+      ctx2d.fillText(row, canvas.width / 2, 6 + lineHeight * i + lineHeight / 2);
+    });
 
     const texture = new THREE.CanvasTexture(canvas);
     const sprite = new THREE.Sprite(
@@ -161,7 +202,51 @@ export function initViewerFeatures(ctx) {
     sprite.position.copy(position);
     sprite.scale.set(size * (canvas.width / canvas.height), size, 1);
     sprite.renderOrder = 1000;
+    measureGroup.add(sprite);
     return sprite;
+  }
+
+  function addCoordinateGuides(a, b, data) {
+    const pX = new THREE.Vector3(b.x, a.y, a.z);
+    const pY = new THREE.Vector3(b.x, b.y, a.z);
+    if (Math.abs(data.dx) > 1e-6) addLine(a, pX, 0xff6666, 0.55);
+    if (Math.abs(data.dy) > 1e-6) addLine(pX, pY, 0x66cc66, 0.55);
+    if (Math.abs(data.dz) > 1e-6) addLine(pY, b, 0x6699ff, 0.55);
+  }
+
+  function addVerticalGuide(a, b) {
+    const foot = new THREE.Vector3(a.x, a.y, b.z);
+    addLine(a, foot, 0xffcc00, 1);
+    if (Math.hypot(b.x - a.x, b.y - a.y) > 1e-6) {
+      addLine(foot, b, 0xffcc00, 0.35);
+    }
+  }
+
+  function buildMeasureLabel(data) {
+    const isVertical = measureType === 'vertical';
+    const primary = isVertical ? data.vertical : data.direct;
+    const primaryLabel = isVertical ? t('measurePrimaryVertical') : t('measurePrimary');
+    return [
+      `${primaryLabel}: ${primary.toFixed(2)} mm`,
+      `${t('measureDeltaX')}: ${data.dx.toFixed(2)} mm`,
+      `${t('measureDeltaY')}: ${data.dy.toFixed(2)} mm`,
+      `${t('measureDeltaZ')}: ${data.dz.toFixed(2)} mm`,
+    ];
+  }
+
+  function completeMeasurement(a, b) {
+    const data = computeMeasure(a, b);
+    updateMeasureResultPanel(data);
+
+    if (measureType === 'vertical') {
+      addVerticalGuide(a, b);
+    } else {
+      addLine(a, b, 0xffcc00, 1);
+      addCoordinateGuides(a, b, data);
+    }
+
+    const mid = a.clone().add(b).multiplyScalar(0.5);
+    addMeasureLabel(buildMeasureLabel(data), mid);
   }
 
   function onMeasureClick(event) {
@@ -179,8 +264,7 @@ export function initViewerFeatures(ctx) {
     addMarker(point);
 
     if (measurePoints.length === 2) {
-      const dist = measurePoints[0].distanceTo(measurePoints[1]);
-      addMeasureLine(measurePoints[0], measurePoints[1], dist);
+      completeMeasurement(measurePoints[0], measurePoints[1]);
       measurePoints = [];
     }
   }
@@ -230,6 +314,11 @@ export function initViewerFeatures(ctx) {
     applySectionClip();
   }
 
+  function setMeasureControlsVisible(visible) {
+    document.getElementById('measure-controls')?.classList.toggle('hidden', !visible);
+    if (!visible) document.getElementById('measure-result')?.classList.add('hidden');
+  }
+
   function bindUI() {
     document.getElementById('btn-view-top')?.addEventListener('click', () => setStandardView('top'));
     document.getElementById('btn-view-front')?.addEventListener('click', () => setStandardView('front'));
@@ -240,8 +329,15 @@ export function initViewerFeatures(ctx) {
     document.getElementById('toggle-measure')?.addEventListener('change', (e) => {
       measureMode = e.target.checked;
       canvas.style.cursor = measureMode ? 'crosshair' : '';
+      setMeasureControlsVisible(measureMode);
       if (!measureMode) clearMeasurements();
     });
+
+    document.getElementById('measure-type')?.addEventListener('change', (e) => {
+      measureType = e.target.value;
+      clearMeasurements();
+    });
+
     document.getElementById('btn-clear-measure')?.addEventListener('click', clearMeasurements);
 
     document.getElementById('toggle-section')?.addEventListener('change', (e) => {
@@ -264,6 +360,29 @@ export function initViewerFeatures(ctx) {
     });
 
     canvas.addEventListener('click', onMeasureClick);
+
+    document.addEventListener('languagechange', () => {
+      const panel = document.getElementById('measure-result');
+      if (!panel || panel.classList.contains('hidden')) return;
+      const primaryEl = document.getElementById('measure-val-primary');
+      const dxEl = document.getElementById('measure-val-dx');
+      const dyEl = document.getElementById('measure-val-dy');
+      const dzEl = document.getElementById('measure-val-dz');
+      const primaryLabel = panel.querySelector('[data-i18n="measurePrimary"]');
+      if (primaryLabel) {
+        primaryLabel.textContent = measureType === 'vertical'
+          ? t('measurePrimaryVertical')
+          : t('measurePrimary');
+      }
+      if (primaryEl && dxEl && dyEl && dzEl) {
+        [dxEl, dyEl, dzEl].forEach((el) => {
+          const val = parseFloat(el.textContent);
+          if (!Number.isNaN(val)) el.textContent = formatMm(val);
+        });
+        const primaryVal = parseFloat(primaryEl.textContent);
+        if (!Number.isNaN(primaryVal)) primaryEl.textContent = formatMm(primaryVal);
+      }
+    });
   }
 
   bindUI();

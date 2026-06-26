@@ -138,10 +138,46 @@ html, body {
   gap: 6px;
 }
 
-.section-controls {
+.section-controls,
+.measure-controls {
   margin-top: 10px;
   padding-top: 10px;
   border-top: 1px solid var(--border);
+}
+
+.measure-result {
+  margin-top: 10px;
+  padding: 10px 12px;
+  background: var(--bg-hover);
+  border-radius: var(--radius);
+}
+
+.measure-result-title {
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.measure-result-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 10px;
+}
+
+.measure-result-stats dt {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.measure-result-stats dd {
+  font-size: 0.82rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  color: #ffcc00;
 }
 
 .recent-files {
