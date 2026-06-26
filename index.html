@@ -238,6 +238,30 @@
         <span class="empty-hint empty-open-trigger" data-i18n="emptyHint" data-i18n-title="emptyTitleAttr" title="클릭하여 파일 열기">클릭하여 파일 열기</span>
       </div>
       <div id="toast" class="toast hidden"></div>
+
+      <section id="visitor-chat" class="visitor-chat" aria-label="Visitor chat">
+        <div class="visitor-chat-bar">
+          <button type="button" id="visitor-chat-toggle" class="visitor-chat-toggle" aria-expanded="false">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            </svg>
+            <span data-i18n="chatTitle">방문자 메시지</span>
+            <span id="visitor-chat-count" class="visitor-chat-count">0</span>
+          </button>
+          <button type="button" id="visitor-chat-clear" class="visitor-chat-clear-btn" data-i18n="chatClear">지우기</button>
+        </div>
+        <div id="visitor-chat-panel" class="visitor-chat-panel hidden">
+          <div id="visitor-chat-messages" class="visitor-chat-messages" role="log" aria-live="polite"></div>
+          <form id="visitor-chat-form" class="visitor-chat-form">
+            <input type="text" id="visitor-chat-name" class="visitor-chat-name" maxlength="24" data-i18n-placeholder="chatNamePlaceholder" placeholder="닉네임 (선택)" autocomplete="nickname" />
+            <div class="visitor-chat-input-row">
+              <input type="text" id="visitor-chat-input" class="visitor-chat-input" maxlength="500" required data-i18n-placeholder="chatInputPlaceholder" placeholder="메시지를 입력하세요..." autocomplete="off" />
+              <button type="submit" class="btn btn-primary visitor-chat-send" data-i18n="chatSend">전송</button>
+            </div>
+          </form>
+          <p id="visitor-chat-hint" class="visitor-chat-hint" data-i18n="chatHintLocal">메시지는 이 브라우저에 저장됩니다.</p>
+        </div>
+      </section>
     </main>
 
     <div id="loading" class="loading-screen hidden" aria-live="polite" aria-busy="false">
