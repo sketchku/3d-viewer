@@ -1,4 +1,4 @@
-import { CHAT_CONFIG } from './chat-config.js?v=2.5.3';
+import { CHAT_CONFIG } from './chat-config.js?v=2.5.4';
 
 const STORAGE_KEY = '3d-viewer-visitor-chat';
 const NAME_KEY = '3d-viewer-visitor-name';
@@ -90,7 +90,95 @@ async function createFirebaseStore(config) {
   };
 }
 
+function parseTelegraphMessages(page) {
+  const pre = page?.content?.find((node) => node.tag === 'pre');
+  const raw = pre?.children?.[0] || '[]';
+  try {
+    const rows = JSON.parse(raw);
+    return Array.isArray(rows) ? rows : [];
+  } catch {
+    return [];
+  }
+}
+
+function telegraphContentFromMessages(messages) {
+  return JSON.stringify([{ tag: 'pre', children: [JSON.stringify(messages)] }]);
+}
+
+function createTelegraphStore(config) {
+  const { accessToken, pagePath } = config;
+  let cachedTitle = '3D Viewer Visitor Chat';
+  let pollTimer = null;
+
+  async function fetchPage() {
+    const res = await fetch(`https://api.telegra.ph/getPage/${pagePath}?return_content=true`);
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || 'Telegraph read failed');
+    cachedTitle = data.result.title || cachedTitle;
+    return parseTelegraphMessages(data.result);
+  }
+
+  async function saveMessages(messages) {
+    const body = new URLSearchParams({
+      access_token: accessToken,
+      path: pagePath,
+      title: cachedTitle,
+      content: telegraphContentFromMessages(messages),
+      author_name: '3D Viewer',
+    });
+    const res = await fetch('https://api.telegra.ph/editPage', {
+      method: 'POST',
+      body,
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || 'Telegraph write failed');
+  }
+
+  return {
+    mode: 'telegraph',
+    async load() {
+      return fetchPage();
+    },
+    async save(messages) {
+      await saveMessages(messages);
+    },
+    async add(message) {
+      const rows = await fetchPage();
+      const entry = { id: createId(), ...message };
+      const next = [...rows, entry].slice(-(CHAT_CONFIG.maxMessages || 300));
+      await saveMessages(next);
+      return entry;
+    },
+    async clear() {
+      await saveMessages([]);
+    },
+    subscribe(callback) {
+      const poll = async () => {
+        try {
+          callback(await fetchPage());
+        } catch (err) {
+          console.warn('Telegraph poll failed:', err);
+        }
+      };
+      poll();
+      pollTimer = window.setInterval(poll, 12000);
+      return () => {
+        if (pollTimer) window.clearInterval(pollTimer);
+      };
+    },
+  };
+}
+
 async function createStore() {
+  const tg = CHAT_CONFIG.telegraph;
+  if (CHAT_CONFIG.storage === 'telegraph' && tg?.accessToken && tg?.pagePath) {
+    try {
+      return createTelegraphStore(tg);
+    } catch (err) {
+      console.warn('Telegraph chat init failed:', err);
+    }
+  }
+
   const fb = CHAT_CONFIG.firebase;
   if (
     CHAT_CONFIG.storage === 'firebase'
@@ -136,7 +224,9 @@ export async function initVisitorChat({ t, showToast, getLang }) {
 
   function updateHint() {
     if (!hintEl) return;
-    hintEl.textContent = store.mode === 'firebase' ? t('chatHintShared') : t('chatHintLocal');
+    hintEl.textContent = (store.mode === 'firebase' || store.mode === 'telegraph')
+      ? t('chatHintShared')
+      : t('chatHintLocal');
   }
 
   function renderMessages() {
@@ -190,7 +280,7 @@ export async function initVisitorChat({ t, showToast, getLang }) {
       createdAt: now,
     };
 
-    if (store.mode === 'firebase' && store.add) {
+    if ((store.mode === 'firebase' || store.mode === 'telegraph') && store.add) {
       try {
         await store.add(payload);
         lastSentAt = now;
@@ -227,7 +317,7 @@ export async function initVisitorChat({ t, showToast, getLang }) {
   }
 
   updateHint();
-  if (store.mode === 'firebase') {
+  if (store.mode === 'firebase' || store.mode === 'telegraph') {
     clearBtn?.classList.add('hidden');
   }
   await loadMessages();

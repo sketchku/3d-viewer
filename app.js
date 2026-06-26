@@ -11,7 +11,7 @@ import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
 import { SimplifyModifier } from 'three/addons/modifiers/SimplifyModifier.js';
 import { generateThreeViewDXF } from './drawing-export.js?v=2.4.1';
 import { t, getLanguage } from './i18n.js?v=2.4.1';
-import { initVisitorChat } from './visitor-chat.js?v=2.5.3';
+import { initVisitorChat } from './visitor-chat.js?v=2.5.4';
 import { initViewerFeatures } from './viewer-features.js?v=2.4.1';
 import { initRecentFiles, saveRecentFile } from './recent-files.js?v=2.4.1';
 import { initPartTree, tagPart } from './part-tree.js?v=2.4.1';
