@@ -12,3 +12,8 @@ desktop.ini
 
 # Dev / test only
 test-dxf.html
+gh-auth*.txt
+gh-auth*.log
+gh-stdin.txt
+gh-stdout.txt
+gh-stderr.txt
