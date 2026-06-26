@@ -48,6 +48,9 @@ async function getCad2dModule() {
 const SUPPORTED_FORMATS = {
   stp: 'STEP', step: 'STEP',
   stl: 'STL',
+  stla: 'STL (ASCII)',
+  stlb: 'STL (Binary)',
+  'stl.gz': 'STL (GZIP)',
   obj: 'OBJ',
   ply: 'PLY',
   glb: 'GLB', gltf: 'GLTF',
@@ -525,6 +528,14 @@ function setupUI() {
   });
 }
 
+function parseFileExtension(filename) {
+  const lower = (filename || '').toLowerCase();
+  if (lower.endsWith('.stl.gz')) return 'stl.gz';
+  const parts = filename.split('.');
+  if (parts.length < 2) return '';
+  return parts.pop().toLowerCase();
+}
+
 // ── File loading ──
 async function loadFile(file, options = {}) {
   if (!file || file.size === 0) {
@@ -532,13 +543,11 @@ async function loadFile(file, options = {}) {
     return;
   }
 
-  const parts = file.name.split('.');
-  if (parts.length < 2) {
+  const ext = parseFileExtension(file.name);
+  if (!ext) {
     showAlert(t('fileError'), t('fileErrorNoExt'));
     return;
   }
-
-  const ext = parts.pop().toLowerCase();
   if (!SUPPORTED_FORMATS[ext]) {
     showAlert(t('unsupportedFormat'), t('unsupportedFormatMsg', { ext }));
     return;
@@ -806,22 +815,33 @@ async function finalizeMeshGeometry(geometry, strategy, onProgress, signal) {
 
 async function loadMesh(buffer, ext, filename, { strategy, onProgress, signal } = {}) {
   throwIfCancelled(signal);
-  if (ext === 'stl') {
-    let geometry;
+  const { isStlExtension, loadStl } = await import('./stl-loader.js?v=2.5.1');
+  if (isStlExtension(ext)) {
+    let parts;
     try {
-      geometry = new STLLoader().parse(buffer);
-    } catch {
-      throw new Error(t('stlInvalid'));
+      parts = await loadStl(buffer, THREE, { ext, signal, onProgress });
+    } catch (err) {
+      if (err?.message === 'GZIP_STL_UNSUPPORTED') throw new Error(t('stlGzipUnsupported'));
+      if (err?.message === 'STL_PARSE_FAILED') throw new Error(t('stlInvalid'));
+      if (err?.message === 'STL_NO_VERTICES') throw new Error(t('stlNoVertices'));
+      throw err;
     }
-    if (!geometry.attributes.position || geometry.attributes.position.count === 0) {
-      throw new Error(t('stlNoVertices'));
+
+    const stem = filename.replace(/\.(stl\.gz|stla|stlb|stl)$/i, '');
+    for (let i = 0; i < parts.length; i++) {
+      throwIfCancelled(signal);
+      const part = parts[i];
+      let geometry = part.geometry;
+      geometry = await finalizeMeshGeometry(geometry, strategy, onProgress, signal);
+      throwIfCancelled(signal);
+      const material = defaultMaterial.clone();
+      if (geometry.attributes.color) material.vertexColors = true;
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.castShadow = !strategy?.disableShadows;
+      tagPart(mesh, parts.length > 1 ? part.name : stem, i);
+      modelGroup.add(mesh);
+      if (strategy?.progressive) await yieldToMain(signal);
     }
-    geometry = await finalizeMeshGeometry(geometry, strategy, onProgress, signal);
-    throwIfCancelled(signal);
-    const mesh = new THREE.Mesh(geometry, defaultMaterial.clone());
-    mesh.castShadow = !strategy?.disableShadows;
-    tagPart(mesh, filename.replace(/\.[^.]+$/, ''), 0);
-    modelGroup.add(mesh);
     return;
   }
 

@@ -28,7 +28,7 @@ jobs:
         run: |
           mkdir site
           cp index.html styles.css .nojekyll site/
-          for f in app.js i18n.js i18n-boot.js web-config.js bg-pixels.js \
+          for f in app.js i18n.js i18n-boot.js web-config.js bg-pixels.js stl-loader.js \
             cad2d-loader.js cad-step-convert.js cad-format-guide.js rhino-loader.js \
             large-file-loader.js part-tree.js drawing-export.js viewer-features.js recent-files.js; do
             cp "$f" site/
