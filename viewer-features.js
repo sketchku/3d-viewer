@@ -113,6 +113,21 @@ export function initViewerFeatures(ctx) {
     document.getElementById('measure-result')?.classList.add('hidden');
   }
 
+  const ORTHO_COLORS = { x: 0xff6666, y: 0x66cc66, z: 0x6699ff };
+
+  function getOrthoAxis(type) {
+    if (type === 'ortho-x') return 'x';
+    if (type === 'ortho-y') return 'y';
+    if (type === 'ortho-z' || type === 'vertical') return 'z';
+    return null;
+  }
+
+  function getOrthoEndPoint(a, b, axis) {
+    if (axis === 'x') return new THREE.Vector3(b.x, a.y, a.z);
+    if (axis === 'y') return new THREE.Vector3(a.x, b.y, a.z);
+    return new THREE.Vector3(a.x, a.y, b.z);
+  }
+
   function computeMeasure(a, b) {
     const dx = b.x - a.x;
     const dy = b.y - a.y;
@@ -121,9 +136,27 @@ export function initViewerFeatures(ctx) {
       dx,
       dy,
       dz,
+      orthoX: Math.abs(dx),
+      orthoY: Math.abs(dy),
+      orthoZ: Math.abs(dz),
       direct: a.distanceTo(b),
-      vertical: Math.abs(dz),
     };
+  }
+
+  function getPrimaryValue(data, type) {
+    const axis = getOrthoAxis(type);
+    if (axis === 'x') return data.orthoX;
+    if (axis === 'y') return data.orthoY;
+    if (axis === 'z') return data.orthoZ;
+    return data.direct;
+  }
+
+  function getPrimaryLabelKey(type) {
+    const axis = getOrthoAxis(type);
+    if (axis === 'x') return 'measurePrimaryOrthoX';
+    if (axis === 'y') return 'measurePrimaryOrthoY';
+    if (axis === 'z') return 'measurePrimaryOrthoZ';
+    return 'measurePrimary';
   }
 
   function formatMm(value) {
@@ -139,11 +172,10 @@ export function initViewerFeatures(ctx) {
     const primaryLabel = panel?.querySelector('[data-i18n="measurePrimary"]');
     if (!panel || !primaryEl || !dxEl || !dyEl || !dzEl) return;
 
-    const isVertical = measureType === 'vertical';
     if (primaryLabel) {
-      primaryLabel.textContent = isVertical ? t('measurePrimaryVertical') : t('measurePrimary');
+      primaryLabel.textContent = t(getPrimaryLabelKey(measureType));
     }
-    primaryEl.textContent = formatMm(isVertical ? data.vertical : data.direct);
+    primaryEl.textContent = formatMm(getPrimaryValue(data, measureType));
     dxEl.textContent = formatMm(data.dx);
     dyEl.textContent = formatMm(data.dy);
     dzEl.textContent = formatMm(data.dz);
@@ -214,18 +246,17 @@ export function initViewerFeatures(ctx) {
     if (Math.abs(data.dz) > 1e-6) addLine(pY, b, 0x6699ff, 0.55);
   }
 
-  function addVerticalGuide(a, b) {
-    const foot = new THREE.Vector3(a.x, a.y, b.z);
-    addLine(a, foot, 0xffcc00, 1);
-    if (Math.hypot(b.x - a.x, b.y - a.y) > 1e-6) {
-      addLine(foot, b, 0xffcc00, 0.35);
+  function addOrthoGuide(a, b, axis) {
+    const end = getOrthoEndPoint(a, b, axis);
+    addLine(a, end, ORTHO_COLORS[axis], 1);
+    if (b.distanceTo(end) > 1e-6) {
+      addLine(end, b, ORTHO_COLORS[axis], 0.3);
     }
   }
 
   function buildMeasureLabel(data) {
-    const isVertical = measureType === 'vertical';
-    const primary = isVertical ? data.vertical : data.direct;
-    const primaryLabel = isVertical ? t('measurePrimaryVertical') : t('measurePrimary');
+    const primary = getPrimaryValue(data, measureType);
+    const primaryLabel = t(getPrimaryLabelKey(measureType));
     return [
       `${primaryLabel}: ${primary.toFixed(2)} mm`,
       `${t('measureDeltaX')}: ${data.dx.toFixed(2)} mm`,
@@ -238,8 +269,9 @@ export function initViewerFeatures(ctx) {
     const data = computeMeasure(a, b);
     updateMeasureResultPanel(data);
 
-    if (measureType === 'vertical') {
-      addVerticalGuide(a, b);
+    const orthoAxis = getOrthoAxis(measureType);
+    if (orthoAxis) {
+      addOrthoGuide(a, b, orthoAxis);
     } else {
       addLine(a, b, 0xffcc00, 1);
       addCoordinateGuides(a, b, data);
@@ -370,9 +402,7 @@ export function initViewerFeatures(ctx) {
       const dzEl = document.getElementById('measure-val-dz');
       const primaryLabel = panel.querySelector('[data-i18n="measurePrimary"]');
       if (primaryLabel) {
-        primaryLabel.textContent = measureType === 'vertical'
-          ? t('measurePrimaryVertical')
-          : t('measurePrimary');
+        primaryLabel.textContent = t(getPrimaryLabelKey(measureType));
       }
       if (primaryEl && dxEl && dyEl && dzEl) {
         [dxEl, dyEl, dzEl].forEach((el) => {
