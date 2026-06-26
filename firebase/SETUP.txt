@@ -1,0 +1,29 @@
+Firebase Realtime Database — 공유 방문자 채팅 설정
+================================================
+
+1) Firebase 콘솔에서 프로젝트 생성
+   https://console.firebase.google.com/
+
+2) Realtime Database 만들기
+   - Build > Realtime Database > Create Database
+   - 지역: asia-southeast1 (또는 가까운 지역)
+   - 보안 규칙: "테스트 모드"로 시작 후 아래 규칙으로 교체
+
+3) 규칙 붙여넣기
+   firebase/database.rules.json 내용을
+   Realtime Database > Rules 탭에 붙여넣고 Publish
+
+4) 웹 앱 등록
+   - Project settings > General > Your apps > Web (</>)
+   - 앱 닉네임: 3d-viewer-chat
+   - Firebase SDK snippet에서 firebaseConfig 값 복사
+
+5) 설정 스크립트 실행 (프로젝트 루트)
+   setup-firebase-chat.bat
+
+6) GitHub에 푸시 후 Pages 재배포
+   git add chat-config.js
+   git commit -m "Enable Firebase shared visitor chat"
+   git push origin main
+
+※ Firebase 웹 API 키는 공개되어도 되며, database.rules.json으로 쓰기를 제한합니다.

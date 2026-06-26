@@ -225,6 +225,8 @@ const STRINGS = {
     chatHintLocal: '메시지는 이 브라우저에 저장됩니다.',
     chatHintShared: '메시지는 모든 방문자와 공유됩니다.',
     chatAnonymous: '방문자',
+    chatFirebaseError: 'Firebase 채팅 연결에 실패했습니다. 설정을 확인해 주세요.',
+    chatRateLimit: '잠시 후 다시 전송해 주세요.',
   },
   en: {
     pageTitle: '3D File Viewer',
@@ -447,6 +449,8 @@ const STRINGS = {
     chatHintLocal: 'Messages are saved in this browser.',
     chatHintShared: 'Messages are shared with all visitors.',
     chatAnonymous: 'Visitor',
+    chatFirebaseError: 'Firebase chat connection failed. Please check the configuration.',
+    chatRateLimit: 'Please wait a moment before sending again.',
   },
 };
 

@@ -1,4 +1,8 @@
-/** Visitor chat storage config. Set storage to 'firebase' for shared messages across visitors. */
+/**
+ * Visitor chat storage config.
+ * Run setup-firebase-chat.bat to enable Firebase shared chat.
+ * See firebase/SETUP.txt for manual steps.
+ */
 export const CHAT_CONFIG = {
   storage: 'local',
   maxMessages: 300,

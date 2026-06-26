@@ -121,9 +121,18 @@ export async function initVisitorChat({ t, showToast, getLang }) {
 
   if (!root || !panel || !messagesEl || !form || !textInput) return null;
 
-  const store = await createStore();
+  let store;
+  try {
+    store = await createStore();
+  } catch (err) {
+    console.error(err);
+    showToast?.(t('chatFirebaseError'), 'error');
+    store = createLocalStore();
+  }
+
   let messages = [];
   let expanded = false;
+  let lastSentAt = 0;
 
   function updateHint() {
     if (!hintEl) return;
@@ -170,14 +179,25 @@ export async function initVisitorChat({ t, showToast, getLang }) {
   async function addMessage(text, name) {
     const trimmed = text.trim();
     if (!trimmed) return;
+    const now = Date.now();
+    if (now - lastSentAt < 2000) {
+      showToast?.(t('chatRateLimit'), 'info');
+      return;
+    }
     const payload = {
       name: (name || '').trim().slice(0, 24) || t('chatAnonymous'),
       text: trimmed.slice(0, 500),
-      createdAt: Date.now(),
+      createdAt: now,
     };
 
     if (store.mode === 'firebase' && store.add) {
-      await store.add(payload);
+      try {
+        await store.add(payload);
+        lastSentAt = now;
+      } catch (err) {
+        console.error(err);
+        showToast?.(t('chatFirebaseError'), 'error');
+      }
       return;
     }
 
@@ -207,6 +227,9 @@ export async function initVisitorChat({ t, showToast, getLang }) {
   }
 
   updateHint();
+  if (store.mode === 'firebase') {
+    clearBtn?.classList.add('hidden');
+  }
   await loadMessages();
 
   if (store.subscribe) {

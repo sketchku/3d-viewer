@@ -1,0 +1,11 @@
+{
+  "rules": {
+    "messages": {
+      ".read": true,
+      "$messageId": {
+        ".write": "!data.exists()",
+        ".validate": "newData.hasChildren(['name', 'text', 'createdAt']) && newData.child('name').isString() && newData.child('name').val().length <= 24 && newData.child('text').isString() && newData.child('text').val().length > 0 && newData.child('text').val().length <= 500 && newData.child('createdAt').isNumber() && newData.child('createdAt').val() <= now + 600000"
+      }
+    }
+  }
+}
