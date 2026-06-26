@@ -235,6 +235,7 @@ scene.add(modelGroup);
 let occt = null;
 let defaultMaterial = null;
 let autoRotate = false;
+const AUTO_ROTATE_SPEED = 1.5;
 let initialCameraState = null;
 let currentFile = null; // { name, ext, buffer: ArrayBuffer }
 let viewerFeatures = null;
@@ -334,9 +335,6 @@ function resize() {
 function animate() {
   requestAnimationFrame(animate);
   bgPixels.tick();
-  if (autoRotate && modelGroup.children.length > 0) {
-    modelGroup.rotation.z += 0.005;
-  }
   controls.update();
   renderer.render(scene, activeCamera);
 }
@@ -348,6 +346,7 @@ function setViewMode(mode) {
     controls.object = orthoCamera;
     controls.enableRotate = false;
     autoRotate = false;
+    controls.autoRotate = false;
     const autoRotateEl = document.getElementById('toggle-auto-rotate');
     if (autoRotateEl) autoRotateEl.checked = false;
     document.getElementById('grid-plane').value = 'xy';
@@ -426,6 +425,20 @@ function setupUI() {
   });
   document.getElementById('toggle-auto-rotate').addEventListener('change', (e) => {
     autoRotate = e.target.checked;
+    if (autoRotate) {
+      gridPlane = 'xy';
+      const gridPlaneEl = document.getElementById('grid-plane');
+      if (gridPlaneEl) gridPlaneEl.value = 'xy';
+      rebuildGrid(gridSize);
+      if (viewMode === '3d') {
+        camera.up.set(0, 0, 1);
+        modelGroup.rotation.set(0, 0, 0);
+        controls.autoRotate = true;
+        controls.autoRotateSpeed = AUTO_ROTATE_SPEED;
+      }
+    } else {
+      controls.autoRotate = false;
+    }
   });
   document.getElementById('btn-reset-view').addEventListener('click', resetView);
   document.getElementById('btn-fit').addEventListener('click', fitToView);

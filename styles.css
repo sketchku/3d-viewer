@@ -560,6 +560,19 @@ html, body {
   line-height: 1.5;
 }
 
+.sidebar-contact {
+  margin-top: 6px;
+}
+
+.sidebar-contact a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.sidebar-contact a:hover {
+  text-decoration: underline;
+}
+
 /* Viewport */
 .viewport {
   flex: 1;
