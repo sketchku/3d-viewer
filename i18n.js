@@ -227,6 +227,9 @@ const STRINGS = {
     chatAnonymous: '방문자',
     chatFirebaseError: 'Firebase 채팅 연결에 실패했습니다. 설정을 확인해 주세요.',
     chatRateLimit: '잠시 후 다시 전송해 주세요.',
+    chatTranslating: '번역 중...',
+    chatTranslateFailed: '번역에 실패했습니다. 원문이 전송됩니다.',
+    chatHintTranslate: '메시지는 설정한 언어로 자동 번역되어 표시됩니다.',
   },
   en: {
     pageTitle: '3D File Viewer',
@@ -451,6 +454,9 @@ const STRINGS = {
     chatAnonymous: 'Visitor',
     chatFirebaseError: 'Firebase chat connection failed. Please check the configuration.',
     chatRateLimit: 'Please wait a moment before sending again.',
+    chatTranslating: 'Translating...',
+    chatTranslateFailed: 'Translation failed. Original text was sent.',
+    chatHintTranslate: 'Messages are auto-translated to your selected language.',
   },
 };
 

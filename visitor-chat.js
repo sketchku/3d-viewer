@@ -1,4 +1,5 @@
 import { CHAT_CONFIG } from './chat-config.js?v=2.5.4';
+import { textForUpload, textForViewer } from './chat-translate.js?v=2.5.5';
 
 const STORAGE_KEY = '3d-viewer-visitor-chat';
 const NAME_KEY = '3d-viewer-visitor-name';
@@ -206,6 +207,7 @@ export async function initVisitorChat({ t, showToast, getLang }) {
   const textInput = document.getElementById('visitor-chat-input');
   const countEl = document.getElementById('visitor-chat-count');
   const hintEl = document.getElementById('visitor-chat-hint');
+  const sendBtn = form?.querySelector('.visitor-chat-send');
 
   if (!root || !panel || !messagesEl || !form || !textInput) return null;
 
@@ -221,24 +223,39 @@ export async function initVisitorChat({ t, showToast, getLang }) {
   let messages = [];
   let expanded = false;
   let lastSentAt = 0;
+  let renderGen = 0;
+  let sending = false;
 
   function updateHint() {
     if (!hintEl) return;
-    hintEl.textContent = (store.mode === 'firebase' || store.mode === 'telegraph')
+    const modeHint = (store.mode === 'firebase' || store.mode === 'telegraph')
       ? t('chatHintShared')
       : t('chatHintLocal');
+    hintEl.textContent = `${modeHint} ${t('chatHintTranslate')}`;
   }
 
-  function renderMessages() {
+  async function renderMessages() {
+    const gen = ++renderGen;
+    const lang = getLang?.() || 'ko';
     messagesEl.innerHTML = '';
+
     if (!messages.length) {
       const empty = document.createElement('p');
       empty.className = 'visitor-chat-empty';
       empty.textContent = t('chatEmpty');
       messagesEl.appendChild(empty);
     } else {
-      const lang = getLang?.() || 'ko';
       for (const msg of messages) {
+        if (gen !== renderGen) return;
+
+        let displayText = msg.text;
+        try {
+          displayText = await textForViewer(msg, lang);
+        } catch (err) {
+          console.warn('Chat display translation failed:', err);
+        }
+        if (gen !== renderGen) return;
+
         const item = document.createElement('article');
         item.className = 'visitor-chat-message';
         item.innerHTML = `
@@ -246,11 +263,13 @@ export async function initVisitorChat({ t, showToast, getLang }) {
             <strong class="visitor-chat-author">${escapeHtml(msg.name || t('chatAnonymous'))}</strong>
             <time class="visitor-chat-time">${formatTime(msg.createdAt, lang)}</time>
           </header>
-          <p class="visitor-chat-text">${escapeHtml(msg.text)}</p>
+          <p class="visitor-chat-text">${escapeHtml(displayText)}</p>
         `;
         messagesEl.appendChild(item);
       }
     }
+
+    if (gen !== renderGen) return;
     if (countEl) countEl.textContent = String(messages.length);
     messagesEl.scrollTop = messagesEl.scrollHeight;
   }
@@ -266,19 +285,49 @@ export async function initVisitorChat({ t, showToast, getLang }) {
     toggleBtn?.setAttribute('aria-expanded', open ? 'true' : 'false');
   }
 
+  function setSending(active) {
+    sending = active;
+    if (sendBtn) {
+      sendBtn.disabled = active;
+      sendBtn.textContent = active ? t('chatTranslating') : t('chatSend');
+    }
+    textInput.disabled = active;
+  }
+
   async function addMessage(text, name) {
     const trimmed = text.trim();
-    if (!trimmed) return;
+    if (!trimmed || sending) return;
     const now = Date.now();
     if (now - lastSentAt < 2000) {
       showToast?.(t('chatRateLimit'), 'info');
       return;
     }
+
+    const userLang = getLang?.() || 'ko';
+    let textToSave = trimmed.slice(0, 500);
+    let originalText = null;
+    let lang = userLang;
+
+    setSending(true);
+    try {
+      const uploaded = await textForUpload(trimmed, userLang);
+      textToSave = uploaded.text;
+      lang = uploaded.lang;
+      originalText = uploaded.originalText;
+    } catch (err) {
+      console.warn('Chat upload translation failed:', err);
+      showToast?.(t('chatTranslateFailed'), 'info');
+    } finally {
+      setSending(false);
+    }
+
     const payload = {
       name: (name || '').trim().slice(0, 24) || t('chatAnonymous'),
-      text: trimmed.slice(0, 500),
+      text: textToSave,
+      lang,
       createdAt: now,
     };
+    if (originalText) payload.originalText = originalText;
 
     if ((store.mode === 'firebase' || store.mode === 'telegraph') && store.add) {
       try {
@@ -357,6 +406,7 @@ export async function initVisitorChat({ t, showToast, getLang }) {
 
   document.addEventListener('languagechange', () => {
     updateHint();
+    if (!sending && sendBtn) sendBtn.textContent = t('chatSend');
     renderMessages();
   });
 
