@@ -9,7 +9,28 @@ const LIBREDWG_URL = 'https://cdn.jsdelivr.net/npm/@mlightcad/libredwg-web@0.7.7
 const ENTITY_TYPES = new Set([
   'LINE', 'TEXT', 'MTEXT', 'LWPOLYLINE', 'POLYLINE', 'CIRCLE', 'ARC', 'ELLIPSE',
   'SPLINE', 'POINT', 'INSERT', '3DFACE', 'SOLID', 'HATCH', 'DIMENSION', 'VERTEX',
+  'ATTRIB',
 ]);
+
+const CAD_FONT_FAMILY = '"Noto Sans KR", "Malgun Gothic", "Apple SD Gothic Neo", "Segoe UI", Arial, sans-serif';
+let cadFontsReady = null;
+
+function ensureCadFonts() {
+  if (!cadFontsReady) {
+    cadFontsReady = (async () => {
+      try {
+        await Promise.all([
+          document.fonts.load(`700 48px ${CAD_FONT_FAMILY}`),
+          document.fonts.load(`400 48px ${CAD_FONT_FAMILY}`),
+        ]);
+        await document.fonts.ready;
+      } catch {
+        // System fonts still usable
+      }
+    })();
+  }
+  return cadFontsReady;
+}
 
 const ACI_COLORS = [
   0x000000, 0xff0000, 0xffff00, 0x00ff00, 0x00ffff, 0x0000ff, 0xff00ff, 0xffffff,
@@ -54,16 +75,139 @@ export async function initCad2dEngine() {
   return libredwg;
 }
 
+function looksLikeDxf(text) {
+  return text.includes('SECTION') || text.includes('ENTITIES') || text.includes('HEADER');
+}
+
 function decodeDxfText(buffer) {
-  const utf8 = new TextDecoder('utf-8', { fatal: false }).decode(buffer);
-  if (!utf8.includes('\uFFFD') && (utf8.includes('SECTION') || utf8.includes('ENTITIES'))) {
-    return utf8;
+  const encodings = ['utf-8', 'euc-kr', 'iso-8859-1'];
+  let best = '';
+  for (const encoding of encodings) {
+    try {
+      const text = new TextDecoder(encoding, { fatal: false }).decode(buffer);
+      if (!looksLikeDxf(text)) continue;
+      const bad = (text.match(/\uFFFD/g) || []).length;
+      if (!best || bad < (best.match(/\uFFFD/g) || []).length) best = text;
+      if (bad === 0) return text;
+    } catch {
+      // try next encoding
+    }
   }
-  try {
-    const latin1 = new TextDecoder('iso-8859-1').decode(buffer);
-    if (latin1.includes('SECTION') || latin1.includes('ENTITIES')) return latin1;
-  } catch { /* ignore */ }
-  return utf8;
+  return best || new TextDecoder('utf-8', { fatal: false }).decode(buffer);
+}
+
+function normalizeCadText(input) {
+  if (input == null) return '';
+  let text = String(input).replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+
+  text = text.replace(/\\U\+([0-9A-Fa-f]{4})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
+  text = text.replace(/\\M\+n[0-9A-Fa-f]+;/g, '');
+  text = text.replace(/\\P/g, '\n');
+  text = text.replace(/\\~ /g, ' ');
+  text = text.replace(/\\S([^;^]+)\^([^;]+);/g, '$1$2');
+  text = text.replace(/\\[LlOoKkHhQqWwTtFfSpC^%].*?;/g, '');
+  text = text.replace(/\{([^{}]*);([^{}]*)\}/g, '$2');
+  text = text.replace(/\{|\}/g, '');
+  text = text.replace(/\\([\\{}])/g, '$1');
+  text = text.replace(/[ \t]+\n/g, '\n').trim();
+
+  return text;
+}
+
+function extractEntityText(entity) {
+  let raw = entity?.text ?? entity?.string ?? entity?.textString ?? '';
+  if ((!raw || raw === '<>') && entity?.actualMeasurement != null) {
+    raw = formatMeasurement(entity.actualMeasurement);
+  } else if (raw.includes('<>') && entity?.actualMeasurement != null) {
+    raw = raw.replace(/<>/g, formatMeasurement(entity.actualMeasurement));
+  }
+  return normalizeCadText(raw);
+}
+
+function formatMeasurement(value) {
+  if (!Number.isFinite(value)) return '';
+  const abs = Math.abs(value);
+  const fixed = abs >= 1000 ? value.toFixed(1) : abs >= 1 ? value.toFixed(2) : value.toFixed(3);
+  return fixed.replace(/\.?0+$/, '');
+}
+
+function getTextPosition(entity) {
+  return entity.startPoint
+    || entity.position
+    || entity.middleOfText
+    || entity.insertionPoint
+    || entity.anchorPoint
+    || null;
+}
+
+function getTextHeight(entity) {
+  const h = entity.textHeight ?? entity.height ?? entity.dimTextHeight;
+  return Number.isFinite(h) && h > 0 ? h : 2.5;
+}
+
+function hexColorFromCss(value, fallback = 0xe8eaed) {
+  if (!value || value === 'none') return fallback;
+  const named = String(value).trim();
+  if (named.startsWith('#')) {
+    const hex = named.length === 4
+      ? `#${named[1]}${named[1]}${named[2]}${named[2]}${named[3]}${named[3]}`
+      : named;
+    return Number.parseInt(hex.slice(1), 16);
+  }
+  const rgb = named.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/i);
+  if (rgb) {
+    return (Number(rgb[1]) << 16) | (Number(rgb[2]) << 8) | Number(rgb[3]);
+  }
+  return fallback;
+}
+
+function createTextSprite(THREE, text, height, color) {
+  const lines = String(text || '').split('\n').map((l) => l.trim()).filter(Boolean);
+  if (!lines.length) return null;
+
+  const worldHeight = Math.max(height, 0.8);
+  const fontPx = Math.max(16, Math.min(128, Math.round(worldHeight * 3.2)));
+  const lineGap = 4;
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  const font = `700 ${fontPx}px ${CAD_FONT_FAMILY}`;
+  ctx.font = font;
+
+  let maxW = 0;
+  let totalH = 0;
+  const metrics = lines.map((line) => {
+    const m = ctx.measureText(line);
+    maxW = Math.max(maxW, m.width);
+    const h = m.actualBoundingBoxAscent + m.actualBoundingBoxDescent || fontPx;
+    totalH += h;
+    return { line, w: m.width, h };
+  });
+  totalH += lineGap * (lines.length - 1);
+
+  const pad = Math.max(4, Math.round(fontPx * 0.15));
+  canvas.width = Math.ceil(maxW + pad * 2);
+  canvas.height = Math.ceil(totalH + pad * 2);
+
+  ctx.font = font;
+  ctx.fillStyle = `#${(color >>> 0).toString(16).padStart(6, '0').slice(-6)}`;
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'alphabetic';
+
+  let y = pad;
+  for (const item of metrics) {
+    y += item.h;
+    ctx.fillText(item.line, pad, y);
+    y += lineGap;
+  }
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.needsUpdate = true;
+  const material = new THREE.SpriteMaterial({ map: texture, transparent: true, depthTest: false });
+  const sprite = new THREE.Sprite(material);
+  const scale = worldHeight / fontPx;
+  sprite.scale.set(canvas.width * scale, canvas.height * scale, 1);
+  sprite.center.set(0, 1);
+  return sprite;
 }
 
 function repairDxfText(text) {
@@ -198,6 +342,7 @@ function parseSimpleLayerTable(lines) {
 
 function parseSimpleEntity(lines, startIndex, type) {
   const entity = { type, layer: '0' };
+  const isTextLike = type === 'TEXT' || type === 'MTEXT' || type === 'ATTRIB' || type === 'DIMENSION';
   let i = startIndex + 2;
   while (i < lines.length - 1) {
     const c = lines[i].trim();
@@ -205,19 +350,28 @@ function parseSimpleEntity(lines, startIndex, type) {
     if (c === '0') break;
     if (c === '8') entity.layer = v;
     else if (c === '10') {
-      if (type === 'TEXT') entity.startPoint = { ...(entity.startPoint || {}), x: parseFloat(v) };
+      if (isTextLike) entity.startPoint = { ...(entity.startPoint || {}), x: parseFloat(v) };
       else entity.start = { ...(entity.start || {}), x: parseFloat(v) };
     } else if (c === '20') {
-      if (type === 'TEXT') entity.startPoint = { ...(entity.startPoint || {}), y: parseFloat(v) };
+      if (isTextLike) entity.startPoint = { ...(entity.startPoint || {}), y: parseFloat(v) };
       else entity.start = { ...(entity.start || {}), y: parseFloat(v) };
     } else if (c === '30') {
-      if (type === 'TEXT') entity.startPoint = { ...(entity.startPoint || {}), z: parseFloat(v) };
+      if (isTextLike) entity.startPoint = { ...(entity.startPoint || {}), z: parseFloat(v) };
       else entity.start = { ...(entity.start || {}), z: parseFloat(v) };
-    } else if (c === '11') entity.end = { ...(entity.end || {}), x: parseFloat(v) };
-    else if (c === '21') entity.end = { ...(entity.end || {}), y: parseFloat(v) };
-    else if (c === '31') entity.end = { ...(entity.end || {}), z: parseFloat(v) };
-    else if (c === '40') entity.textHeight = parseFloat(v);
-    else if (c === '1') entity.text = v;
+    } else if (c === '11') {
+      if (type === 'DIMENSION') entity.middleOfText = { ...(entity.middleOfText || {}), x: parseFloat(v) };
+      else entity.end = { ...(entity.end || {}), x: parseFloat(v) };
+    } else if (c === '21') {
+      if (type === 'DIMENSION') entity.middleOfText = { ...(entity.middleOfText || {}), y: parseFloat(v) };
+      else entity.end = { ...(entity.end || {}), y: parseFloat(v) };
+    } else if (c === '31') {
+      if (type === 'DIMENSION') entity.middleOfText = { ...(entity.middleOfText || {}), z: parseFloat(v) };
+      else entity.end = { ...(entity.end || {}), z: parseFloat(v) };
+    } else if (c === '40') {
+      if (type === 'MTEXT') entity.height = parseFloat(v);
+      else entity.textHeight = parseFloat(v);
+    } else if (c === '1' || c === '3') entity.text = (entity.text || '') + v;
+    else if (c === '42') entity.actualMeasurement = parseFloat(v);
     else if (c === '50') entity.rotation = parseFloat(v);
     else if (c === '62') entity.colorNumber = parseInt(v, 10);
     i += 2;
@@ -234,11 +388,16 @@ function parseSimpleDxf(text) {
   while (i < lines.length - 1) {
     const code = lines[i].trim();
     const value = lines[i + 1];
-    if (code === '0' && (value === 'LINE' || value === 'TEXT')) {
+    if (code === '0' && (value === 'LINE' || value === 'TEXT' || value === 'MTEXT' || value === 'DIMENSION' || value === 'ATTRIB')) {
       const { entity, nextIndex } = parseSimpleEntity(lines, i, value);
       i = nextIndex;
       if (value === 'LINE') {
         if (entity.start?.x != null && entity.start?.y != null && entity.end?.x != null && entity.end?.y != null) {
+          entities.push(entity);
+        }
+      } else if (value === 'DIMENSION') {
+        const pos = entity.middleOfText || entity.startPoint;
+        if (pos?.x != null && pos?.y != null && (entity.text || entity.actualMeasurement != null)) {
           entities.push(entity);
         }
       } else if (entity.text && entity.startPoint?.x != null && entity.startPoint?.y != null) {
@@ -253,6 +412,7 @@ function parseSimpleDxf(text) {
 }
 
 export async function loadDxf(buffer, THREE, options = {}) {
+  await ensureCadFonts();
   const DxfParser = await getDxfParser();
   const text = decodeDxfText(buffer);
   const dxf = parseDxfWithFallback(DxfParser, text);
@@ -282,6 +442,7 @@ export async function loadDwg(buffer, THREE, { signal, onProgress } = {}) {
   const report = (current, total) => onProgress?.(current, total);
 
   throwIfCancelled(signal);
+  await ensureCadFonts();
   report(0, 5);
   await yieldToMain(signal);
 
@@ -322,6 +483,49 @@ export async function loadDwg(buffer, THREE, { signal, onProgress } = {}) {
   return group;
 }
 
+function collectSvgTextContent(node) {
+  let text = '';
+  for (const child of node.childNodes) {
+    if (child.nodeType === Node.TEXT_NODE) text += child.textContent || '';
+    else if (child.nodeType === Node.ELEMENT_NODE && child.tagName.toLowerCase() !== 'title') {
+      text += collectSvgTextContent(child);
+    }
+  }
+  return text;
+}
+
+function parseSvgTransform(node) {
+  const raw = node.getAttribute?.('transform') || '';
+  const translate = raw.match(/translate\(([^)]+)\)/i);
+  if (!translate) return { x: 0, y: 0 };
+  const parts = translate[1].split(/[ ,]+/).map(Number);
+  return { x: parts[0] || 0, y: parts[1] || 0 };
+}
+
+function addSvgTextSprites(svgString, THREE, group) {
+  const doc = new DOMParser().parseFromString(svgString, 'image/svg+xml');
+  const texts = doc.querySelectorAll('text');
+  const defaultColor = 0xe8eaed;
+
+  for (const el of texts) {
+    const content = extractEntityText({ text: collectSvgTextContent(el) });
+    if (!content) continue;
+
+    const parentT = parseSvgTransform(el.parentElement);
+    const selfT = parseSvgTransform(el);
+    const x = parseFloat(el.getAttribute('x') || '0') + parentT.x + selfT.x;
+    const y = parseFloat(el.getAttribute('y') || '0') + parentT.y + selfT.y;
+    const fontSize = parseFloat(el.getAttribute('font-size') || '12');
+    const color = hexColorFromCss(el.getAttribute('fill') || el.style?.fill, defaultColor);
+    const sprite = createTextSprite(THREE, content, Math.max(fontSize, 2.5), color);
+    if (!sprite) continue;
+    sprite.position.set(x, -y, 0.5);
+    const rotate = (el.getAttribute('transform') || '').match(/rotate\((-?\d+(?:\.\d+)?)/i);
+    if (rotate) sprite.material.rotation = Number(rotate[1]) * (Math.PI / 180);
+    group.add(sprite);
+  }
+}
+
 function svgToGroup(svgString, THREE) {
   const loader = new SVGLoader();
   const { paths } = loader.parse(svgString);
@@ -351,6 +555,8 @@ function svgToGroup(svgString, THREE) {
       group.add(new THREE.LineLoop(geometry, material));
     }
   }
+
+  addSvgTextSprites(svgString, THREE, group);
   return group;
 }
 
@@ -463,44 +669,17 @@ class DxfSceneBuilder {
     return this.getLayerColor(entity.layer);
   }
 
-  createTextSprite(text, height, color) {
-    const label = String(text || '');
-    const px = 64;
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    ctx.font = `bold ${px}px Arial, sans-serif`;
-    const metrics = ctx.measureText(label);
-    const pad = 8;
-    canvas.width = Math.ceil(metrics.width) + pad * 2;
-    canvas.height = px + pad * 2;
-    ctx.font = `bold ${px}px Arial, sans-serif`;
-    ctx.fillStyle = `#${(color >>> 0).toString(16).padStart(6, '0').slice(-6)}`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(label, canvas.width / 2, canvas.height / 2);
-
-    const texture = new this.THREE.CanvasTexture(canvas);
-    texture.needsUpdate = true;
-    const material = new this.THREE.SpriteMaterial({ map: texture, transparent: true, depthTest: false });
-    const sprite = new this.THREE.Sprite(material);
-    const scale = height / px;
-    sprite.scale.set(canvas.width * scale, canvas.height * scale, 1);
-    sprite.center.set(0.5, 0.5);
-    return sprite;
-  }
-
   addTextMarker(_group, entity, color, layer) {
-    const text = entity.text ?? entity.string ?? '';
+    const text = extractEntityText(entity);
     if (!text) return;
-    const pos = entity.startPoint || entity.position || entity;
-    const x = pos.x ?? entity.x;
-    const y = pos.y ?? entity.y;
-    if (x == null || y == null) return;
-    const height = Math.max(entity.textHeight ?? entity.height ?? 2.5, 1);
-    const rotation = (entity.rotation ?? 0) * (Math.PI / 180);
+    const pos = getTextPosition(entity);
+    if (!pos || pos.x == null || pos.y == null) return;
+    const height = getTextHeight(entity);
+    const rotation = (entity.rotation ?? entity.angle ?? 0) * (Math.PI / 180);
     const layerName = layer || entity.layer || '0';
-    const sprite = this.createTextSprite(text, height, color);
-    sprite.position.set(x, y, 0.5);
+    const sprite = createTextSprite(this.THREE, text, height, color);
+    if (!sprite) return;
+    sprite.position.set(pos.x, pos.y, 0.5);
     sprite.material.rotation = rotation;
     sprite.userData.layerName = layerName;
     this.getLayerBatches(layerName).textMarkers.push(sprite);
@@ -621,8 +800,22 @@ class DxfSceneBuilder {
 
       case 'TEXT':
       case 'MTEXT':
+      case 'ATTRIB':
         this.addTextMarker(group, entity, color, layer);
         break;
+
+      case 'DIMENSION': {
+        const dimText = extractEntityText(entity);
+        if (!dimText) break;
+        this.addTextMarker(group, {
+          ...entity,
+          text: dimText,
+          startPoint: entity.middleOfText || entity.anchorPoint || entity.insertionPoint,
+          textHeight: getTextHeight(entity),
+          rotation: entity.angle ?? 0,
+        }, color, layer);
+        break;
+      }
 
       case '3DFACE':
       case 'SOLID': {

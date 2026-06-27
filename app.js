@@ -42,7 +42,7 @@ import { createBgPixels } from './bg-pixels.js?v=2.5.6';
 let cad2dModule = null;
 async function getCad2dModule() {
   if (!cad2dModule) {
-    cad2dModule = await import('./cad2d-loader.js?v=2.4.1');
+    cad2dModule = await import('./cad2d-loader.js?v=2.6.2');
   }
   return cad2dModule;
 }
