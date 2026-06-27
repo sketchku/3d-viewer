@@ -10,10 +10,11 @@ import { PLYExporter } from 'three/addons/exporters/PLYExporter.js';
 import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
 import { SimplifyModifier } from 'three/addons/modifiers/SimplifyModifier.js';
 import { generateThreeViewDXF } from './drawing-export.js?v=2.4.1';
-import { t, getLanguage } from './i18n.js?v=2.5.6';
+import { t, getLanguage } from './i18n.js?v=2.6.0';
 import { initVisitorChat } from './visitor-chat.js?v=2.5.6';
 import { initViewerFeatures } from './viewer-features.js?v=2.4.1';
 import { initRecentFiles, saveRecentFile } from './recent-files.js?v=2.4.1';
+import { initModelTabs, captureModelThumbnail } from './model-tabs.js?v=2.6.0';
 import { initPartTree, tagPart } from './part-tree.js?v=2.4.1';
 import {
   resolveLoadStrategy,
@@ -248,6 +249,94 @@ let currentFile = null; // { name, ext, buffer: ArrayBuffer }
 let viewerFeatures = null;
 let recentFilesMgr = null;
 let partTreeMgr = null;
+let modelTabsMgr = null;
+
+function getModelTabState() {
+  if (!currentFile || modelGroup.children.length === 0) return null;
+  return {
+    id: modelTabsMgr?.getActiveId() || `${currentFile.name}-${Date.now()}`,
+    file: {
+      name: currentFile.name,
+      ext: currentFile.ext,
+      buffer: currentFile.buffer,
+    },
+    is2d: !!modelGroup.userData.is2d,
+    viewMode,
+    modelPosition: modelGroup.position.clone(),
+    modelRotation: modelGroup.rotation.clone(),
+    initialCameraState: initialCameraState ? {
+      position: initialCameraState.position.clone(),
+      target: initialCameraState.target.clone(),
+    } : null,
+    gridSize,
+    orthoViewSize: orthoCamera.userData.viewSize,
+    orthoBounds: viewMode === '2d' ? {
+      left: orthoCamera.left,
+      right: orthoCamera.right,
+      top: orthoCamera.top,
+      bottom: orthoCamera.bottom,
+    } : null,
+    cameraPosition: activeCamera.position.clone(),
+    cameraNear: activeCamera.near,
+    cameraFar: activeCamera.far,
+  };
+}
+
+function applyModelTabSession(session) {
+  currentFile = {
+    name: session.file.name,
+    ext: session.file.ext,
+    buffer: session.file.buffer,
+  };
+  modelGroup.position.copy(session.modelPosition);
+  modelGroup.rotation.copy(session.modelRotation);
+  modelGroup.userData.is2d = session.is2d;
+
+  setViewMode(session.viewMode);
+
+  if (session.gridSize) rebuildGrid(session.gridSize);
+
+  if (session.viewMode === '2d' && session.orthoViewSize) {
+    orthoCamera.userData.viewSize = session.orthoViewSize;
+    if (session.orthoBounds) {
+      orthoCamera.left = session.orthoBounds.left;
+      orthoCamera.right = session.orthoBounds.right;
+      orthoCamera.top = session.orthoBounds.top;
+      orthoCamera.bottom = session.orthoBounds.bottom;
+    }
+    orthoCamera.near = session.cameraNear ?? 0.01;
+    orthoCamera.far = session.cameraFar ?? 10000;
+    orthoCamera.position.copy(session.cameraPosition);
+    orthoCamera.updateProjectionMatrix();
+  } else {
+    camera.near = session.cameraNear ?? camera.near;
+    camera.far = session.cameraFar ?? camera.far;
+    camera.position.copy(session.cameraPosition);
+    camera.updateProjectionMatrix();
+  }
+
+  if (session.initialCameraState) {
+    initialCameraState = {
+      position: session.initialCameraState.position.clone(),
+      target: session.initialCameraState.target.clone(),
+    };
+    controls.target.copy(session.initialCameraState.target);
+  }
+  controls.update();
+
+  const is2d = session.is2d;
+  fileNameEl.textContent = currentFile.name;
+  fileFormatEl.textContent = SUPPORTED_FORMATS[currentFile.ext] || currentFile.ext.toUpperCase();
+  fileInfo.classList.remove('hidden');
+  emptyState.classList.add('hidden');
+  btnSaveAs.disabled = false;
+  btnExport.disabled = is2d;
+  btnDrawing.disabled = is2d;
+
+  updateStats();
+  partTreeMgr?.refresh(is2d ? 'layers' : 'parts');
+  viewerFeatures?.onModelLoaded();
+}
 
 function applyDeploymentMode() {
   const notice = document.getElementById('web-deploy-notice');
@@ -270,6 +359,15 @@ async function init() {
   document.addEventListener('languagechange', applyDeploymentMode);
   recentFilesMgr = initRecentFiles({ onOpenFile: loadFile, t });
   partTreeMgr = initPartTree({ modelGroup, t, THREE });
+  modelTabsMgr = initModelTabs({
+    t,
+    THREE,
+    modelGroup,
+    maxTabs: 4,
+    captureThumbnail: (group) => captureModelThumbnail(THREE, group),
+    getState: getModelTabState,
+    applyState: applyModelTabSession,
+  });
   viewerFeatures = initViewerFeatures({
     scene,
     camera,
@@ -574,6 +672,9 @@ async function loadFile(file, options = {}) {
     stage: 'parse',
     cancellable: true,
   });
+  if (!options.fromTab) {
+    modelTabsMgr?.stashCurrent();
+  }
   clearModel();
 
   try {
@@ -632,6 +733,7 @@ async function loadFile(file, options = {}) {
     updateStats();
     saveRecentFile(file.name, ext, buffer);
     recentFilesMgr?.refresh();
+    modelTabsMgr?.registerLoaded();
     viewerFeatures?.onModelLoaded();
     partTreeMgr?.refresh(CAD2D_EXTENSIONS.has(ext) ? 'layers' : 'parts');
   } catch (err) {
@@ -920,18 +1022,21 @@ async function loadMesh(buffer, ext, filename, { strategy, onProgress, signal } 
 }
 
 // ── View helpers ──
-function clearModel() {
+function clearModel({ dispose = true } = {}) {
   while (modelGroup.children.length > 0) {
     const child = modelGroup.children[0];
     modelGroup.remove(child);
-    child.traverse((obj) => {
-      if (obj.geometry) obj.geometry.dispose();
-      if (obj.material) {
-        if (Array.isArray(obj.material)) obj.material.forEach((m) => m.dispose());
-        else obj.material.dispose();
-      }
-    });
+    if (dispose) {
+      child.traverse((obj) => {
+        if (obj.geometry) obj.geometry.dispose();
+        if (obj.material) {
+          if (Array.isArray(obj.material)) obj.material.forEach((m) => m.dispose());
+          else obj.material.dispose();
+        }
+      });
+    }
   }
+  modelGroup.position.set(0, 0, 0);
   modelGroup.rotation.set(0, 0, 0);
   modelGroup.userData.is2d = false;
   viewerFeatures?.onModelCleared();

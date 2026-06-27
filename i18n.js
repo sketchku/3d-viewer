@@ -230,6 +230,7 @@ const STRINGS = {
     chatTranslating: '번역 중...',
     chatTranslateFailed: '번역에 실패했습니다. 원문이 전송됩니다.',
     chatHintTranslate: '메시지는 설정한 언어로 자동 번역되어 표시됩니다.',
+    modelTabsAria: '열린 모델 탭',
   },
   en: {
     pageTitle: '3D File Viewer',
@@ -457,6 +458,7 @@ const STRINGS = {
     chatTranslating: 'Translating...',
     chatTranslateFailed: 'Translation failed. Original text was sent.',
     chatHintTranslate: 'Messages are auto-translated to your selected language.',
+    modelTabsAria: 'Open model tabs',
   },
 };
 
