@@ -10,12 +10,12 @@ import { PLYExporter } from 'three/addons/exporters/PLYExporter.js';
 import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
 import { SimplifyModifier } from 'three/addons/modifiers/SimplifyModifier.js';
 import { generateThreeViewDXF } from './drawing-export.js?v=2.4.1';
-import { t, getLanguage } from './i18n.js?v=2.6.1';
+import { t, getLanguage } from './i18n.js?v=2.6.3';
 import { initVisitorChat } from './visitor-chat.js?v=2.5.6';
 import { initViewerFeatures } from './viewer-features.js?v=2.4.1';
 import { initRecentFiles, saveRecentFile } from './recent-files.js?v=2.4.1';
 import { initModelTabs, captureModelThumbnail } from './model-tabs.js?v=2.6.1';
-import { initPartTree, tagPart } from './part-tree.js?v=2.4.1';
+import { initPartTree, tagPart } from './part-tree.js?v=2.6.3';
 import {
   resolveLoadStrategy,
   yieldToMain,
@@ -42,7 +42,7 @@ import { createBgPixels } from './bg-pixels.js?v=2.5.6';
 let cad2dModule = null;
 async function getCad2dModule() {
   if (!cad2dModule) {
-    cad2dModule = await import('./cad2d-loader.js?v=2.6.2');
+    cad2dModule = await import('./cad2d-loader.js?v=2.6.3');
   }
   return cad2dModule;
 }
@@ -339,15 +339,28 @@ function applyModelTabSession(session) {
 }
 
 function applyDeploymentMode() {
-  const notice = document.getElementById('web-deploy-notice');
   const formatsEl = document.getElementById('supported-formats');
-  if (isStaticWebDeployment()) {
-    notice?.classList.remove('hidden');
-    if (formatsEl) formatsEl.textContent = t('supportedFormatsWeb');
-  } else {
-    notice?.classList.add('hidden');
-    if (formatsEl) formatsEl.textContent = t('supportedFormatsLocal');
+  if (formatsEl) {
+    formatsEl.textContent = isStaticWebDeployment()
+      ? t('supportedFormatsWeb')
+      : t('supportedFormatsLocal');
   }
+}
+
+function expandBoxWithSprites(box, object) {
+  object.traverse((child) => {
+    if (!child.isSprite || !child.visible) return;
+    const cx = child.center?.x ?? 0.5;
+    const cy = child.center?.y ?? 0.5;
+    const w = child.scale.x;
+    const h = child.scale.y;
+    const minX = child.position.x - w * cx;
+    const maxX = child.position.x + w * (1 - cx);
+    const minY = child.position.y - h * cy;
+    const maxY = child.position.y + h * (1 - cy);
+    box.expandByPoint(new THREE.Vector3(minX, minY, child.position.z));
+    box.expandByPoint(new THREE.Vector3(maxX, maxY, child.position.z));
+  });
 }
 
 // ── Init ──
@@ -1046,6 +1059,7 @@ function fitToView() {
   if (modelGroup.children.length === 0) return;
 
   const box = new THREE.Box3().setFromObject(modelGroup);
+  expandBoxWithSprites(box, modelGroup);
   const center = box.getCenter(new THREE.Vector3());
   const size = box.getSize(new THREE.Vector3());
   const maxDim = Math.max(size.x, size.y, size.z, 1);

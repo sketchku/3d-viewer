@@ -265,6 +265,27 @@ html, body {
   overflow-y: auto;
 }
 
+.tree-section-title {
+  margin-top: 6px;
+  font-size: 0.64rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.tree-section-title:first-child {
+  margin-top: 0;
+}
+
+.tree-section-sketch {
+  color: var(--accent);
+}
+
+.tree-item-sketch span {
+  color: var(--text);
+}
+
 .tree-item {
   display: flex;
   align-items: center;

@@ -6,6 +6,11 @@ const LAYER_PALETTE = {
   0: '#e8eaed',
 };
 
+function isSketchLayer(name, object) {
+  if (object?.userData?.isSketchLayer) return true;
+  return /sketch|스케치|profile|refgeom|rough|wire|contour|outline/i.test(String(name || ''));
+}
+
 function readLayerColor(object, fallback = '#e8eaed') {
   let hex = null;
   object.traverse((child) => {
@@ -48,6 +53,7 @@ export function initPartTree({ modelGroup, t, THREE }) {
             label: child.userData.layerName,
             object: child,
             visible: child.visible,
+            sketch: isSketchLayer(child.userData.layerName, child),
           });
         }
       });
@@ -57,8 +63,13 @@ export function initPartTree({ modelGroup, t, THREE }) {
           label: '0',
           object: modelGroup,
           visible: modelGroup.visible,
+          sketch: false,
         });
       }
+      entries.sort((a, b) => {
+        if (a.sketch !== b.sketch) return a.sketch ? -1 : 1;
+        return a.label.localeCompare(b.label);
+      });
     } else {
       let idx = 0;
       modelGroup.traverse((child) => {
@@ -96,10 +107,22 @@ export function initPartTree({ modelGroup, t, THREE }) {
     }
 
     const isLayerMode = mode === 'layers';
+    let lastSection = null;
 
     for (const entry of entries) {
+      if (isLayerMode) {
+        const section = entry.sketch ? 'sketch' : 'other';
+        if (section !== lastSection) {
+          const hdr = document.createElement('div');
+          hdr.className = `tree-section-title${section === 'sketch' ? ' tree-section-sketch' : ''}`;
+          hdr.textContent = section === 'sketch' ? t('layerSketchSection') : t('layerOtherSection');
+          list.appendChild(hdr);
+          lastSection = section;
+        }
+      }
+
       const row = document.createElement('div');
-      row.className = 'tree-item';
+      row.className = `tree-item${entry.sketch ? ' tree-item-sketch' : ''}`;
 
       const cbLabel = document.createElement('label');
       cbLabel.className = 'tree-item-check';

@@ -145,6 +145,28 @@ function getTextHeight(entity) {
   return Number.isFinite(h) && h > 0 ? h : 2.5;
 }
 
+export function isSketchLayerName(name) {
+  return /sketch|스케치|profile|refgeom|rough|wire|contour|outline/i.test(String(name || ''));
+}
+
+function getSpriteAnchor(entity) {
+  if (entity.attachmentPoint != null) {
+    const ap = Number(entity.attachmentPoint);
+    const col = (ap - 1) % 3;
+    const row = Math.floor((ap - 1) / 3);
+    return {
+      x: col === 0 ? 0 : col === 1 ? 0.5 : 1,
+      y: row === 0 ? 1 : row === 1 ? 0.5 : 0,
+    };
+  }
+  const h = entity.halign ?? 0;
+  const v = entity.valign ?? 0;
+  return {
+    x: h === 1 ? 0.5 : h === 2 ? 1 : 0,
+    y: v === 3 ? 1 : v === 2 ? 0.5 : 0,
+  };
+}
+
 function hexColorFromCss(value, fallback = 0xe8eaed) {
   if (!value || value === 'none') return fallback;
   const named = String(value).trim();
@@ -161,13 +183,13 @@ function hexColorFromCss(value, fallback = 0xe8eaed) {
   return fallback;
 }
 
-function createTextSprite(THREE, text, height, color) {
+function createTextSprite(THREE, text, height, color, anchor = { x: 0, y: 0 }) {
   const lines = String(text || '').split('\n').map((l) => l.trim()).filter(Boolean);
   if (!lines.length) return null;
 
-  const worldHeight = Math.max(height, 0.8);
-  const fontPx = Math.max(16, Math.min(128, Math.round(worldHeight * 3.2)));
-  const lineGap = 4;
+  const lineHeight = Math.max(height, 0.05);
+  const fontPx = Math.max(12, Math.min(96, Math.round(lineHeight * 4)));
+  const lineGap = Math.max(1, Math.round(fontPx * 0.12));
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
   const font = `700 ${fontPx}px ${CAD_FONT_FAMILY}`;
@@ -182,11 +204,11 @@ function createTextSprite(THREE, text, height, color) {
     totalH += h;
     return { line, w: m.width, h };
   });
-  totalH += lineGap * (lines.length - 1);
+  totalH += lineGap * Math.max(0, lines.length - 1);
 
-  const pad = Math.max(4, Math.round(fontPx * 0.15));
-  canvas.width = Math.ceil(maxW + pad * 2);
-  canvas.height = Math.ceil(totalH + pad * 2);
+  const pad = Math.max(2, Math.round(fontPx * 0.08));
+  canvas.width = Math.max(1, Math.ceil(maxW + pad * 2));
+  canvas.height = Math.max(1, Math.ceil(totalH + pad * 2));
 
   ctx.font = font;
   ctx.fillStyle = `#${(color >>> 0).toString(16).padStart(6, '0').slice(-6)}`;
@@ -202,11 +224,16 @@ function createTextSprite(THREE, text, height, color) {
 
   const texture = new THREE.CanvasTexture(canvas);
   texture.needsUpdate = true;
-  const material = new THREE.SpriteMaterial({ map: texture, transparent: true, depthTest: false });
+  const material = new THREE.SpriteMaterial({
+    map: texture,
+    transparent: true,
+    depthTest: false,
+    sizeAttenuation: false,
+  });
   const sprite = new THREE.Sprite(material);
-  const scale = worldHeight / fontPx;
-  sprite.scale.set(canvas.width * scale, canvas.height * scale, 1);
-  sprite.center.set(0, 1);
+  const unitScale = lineHeight / fontPx;
+  sprite.scale.set(canvas.width * unitScale, canvas.height * unitScale, 1);
+  sprite.center.set(anchor.x, anchor.y);
   return sprite;
 }
 
@@ -502,35 +529,37 @@ function parseSvgTransform(node) {
   return { x: parts[0] || 0, y: parts[1] || 0 };
 }
 
-function addSvgTextSprites(svgString, THREE, group) {
-  const doc = new DOMParser().parseFromString(svgString, 'image/svg+xml');
-  const texts = doc.querySelectorAll('text');
-  const defaultColor = 0xe8eaed;
-
-  for (const el of texts) {
-    const content = extractEntityText({ text: collectSvgTextContent(el) });
-    if (!content) continue;
-
-    const parentT = parseSvgTransform(el.parentElement);
-    const selfT = parseSvgTransform(el);
-    const x = parseFloat(el.getAttribute('x') || '0') + parentT.x + selfT.x;
-    const y = parseFloat(el.getAttribute('y') || '0') + parentT.y + selfT.y;
-    const fontSize = parseFloat(el.getAttribute('font-size') || '12');
-    const color = hexColorFromCss(el.getAttribute('fill') || el.style?.fill, defaultColor);
-    const sprite = createTextSprite(THREE, content, Math.max(fontSize, 2.5), color);
-    if (!sprite) continue;
-    sprite.position.set(x, -y, 0.5);
-    const rotate = (el.getAttribute('transform') || '').match(/rotate\((-?\d+(?:\.\d+)?)/i);
-    if (rotate) sprite.material.rotation = Number(rotate[1]) * (Math.PI / 180);
-    group.add(sprite);
+function resolveSvgLayerName(el, doc) {
+  let node = el;
+  while (node && node !== doc.documentElement) {
+    const candidates = [
+      node.getAttribute('lc:layername'),
+      node.getAttribute('data-layer'),
+      node.getAttribute('layer'),
+      node.getAttribute('inkscape:label'),
+    ];
+    for (const name of candidates) {
+      if (name) return String(name).trim();
+    }
+    const id = node.getAttribute('id');
+    if (id && /^layer[-_:]/i.test(id)) return id.replace(/^layer[-_:]/i, '');
+    node = node.parentElement;
   }
+  return '0';
 }
 
-function svgToGroup(svgString, THREE) {
-  const loader = new SVGLoader();
-  const { paths } = loader.parse(svgString);
-  const group = new THREE.Group();
+function ensureSvgLayerGroup(layerMap, THREE, layerName) {
+  if (!layerMap.has(layerName)) {
+    const layerGroup = new THREE.Group();
+    layerGroup.name = layerName;
+    layerGroup.userData.layerName = layerName;
+    layerGroup.userData.isSketchLayer = isSketchLayerName(layerName);
+    layerMap.set(layerName, layerGroup);
+  }
+  return layerMap.get(layerName);
+}
 
+function addSvgPathsToGroup(paths, THREE, targetGroup) {
   for (const path of paths) {
     const color = path.color || 0xffffff;
     const material = new THREE.LineBasicMaterial({ color });
@@ -542,7 +571,7 @@ function svgToGroup(svgString, THREE) {
       for (const p of pts2d) positions.push(p.x, -p.y, 0);
       const geometry = new THREE.BufferGeometry();
       geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-      group.add(new THREE.Line(geometry, material));
+      targetGroup.add(new THREE.Line(geometry, material));
     }
 
     for (const shape of SVGLoader.createShapes(path)) {
@@ -552,11 +581,85 @@ function svgToGroup(svgString, THREE) {
       for (const p of pts) positions.push(p.x, -p.y, 0);
       const geometry = new THREE.BufferGeometry();
       geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-      group.add(new THREE.LineLoop(geometry, material));
+      targetGroup.add(new THREE.LineLoop(geometry, material));
+    }
+  }
+}
+
+function addSvgTextElement(el, doc, THREE, layerGroup) {
+  const content = extractEntityText({ text: collectSvgTextContent(el) });
+  if (!content) return;
+
+  const parentT = parseSvgTransform(el.parentElement);
+  const selfT = parseSvgTransform(el);
+  const x = parseFloat(el.getAttribute('x') || '0') + parentT.x + selfT.x;
+  const y = parseFloat(el.getAttribute('y') || '0') + parentT.y + selfT.y;
+  const fontSize = parseFloat(el.getAttribute('font-size') || '12');
+  const color = hexColorFromCss(el.getAttribute('fill') || el.style?.fill, 0xe8eaed);
+  const sprite = createTextSprite(THREE, content, Math.max(fontSize, 0.05), color, { x: 0, y: 0 });
+  if (!sprite) return;
+  sprite.position.set(x, -y, 0.5);
+  const rotate = (el.getAttribute('transform') || '').match(/rotate\((-?\d+(?:\.\d+)?)/i);
+  if (rotate) sprite.material.rotation = Number(rotate[1]) * (Math.PI / 180);
+  layerGroup.add(sprite);
+}
+
+function svgToGroup(svgString, THREE) {
+  const doc = new DOMParser().parseFromString(svgString, 'image/svg+xml');
+  const loader = new SVGLoader();
+  const layerMap = new Map();
+  const shapeSelector = 'path,line,polyline,polygon,circle,ellipse';
+  const shapeEls = [...doc.querySelectorAll(shapeSelector)];
+
+  for (const el of shapeEls) {
+    ensureSvgLayerGroup(layerMap, THREE, resolveSvgLayerName(el, doc));
+  }
+
+  const byLayer = new Map();
+  for (const el of shapeEls) {
+    const layerName = resolveSvgLayerName(el, doc);
+    if (!byLayer.has(layerName)) byLayer.set(layerName, []);
+    byLayer.get(layerName).push(el);
+  }
+
+  const serializer = new XMLSerializer();
+  for (const [layerName, elements] of byLayer) {
+    const layerGroup = ensureSvgLayerGroup(layerMap, THREE, layerName);
+    const fragment = `<svg xmlns="http://www.w3.org/2000/svg">${elements.map((el) => serializer.serializeToString(el)).join('')}</svg>`;
+    try {
+      const { paths } = loader.parse(fragment);
+      addSvgPathsToGroup(paths, THREE, layerGroup);
+    } catch {
+      // skip broken layer fragment
     }
   }
 
-  addSvgTextSprites(svgString, THREE, group);
+  for (const el of doc.querySelectorAll('text')) {
+    const layerName = resolveSvgLayerName(el, doc);
+    const layerGroup = ensureSvgLayerGroup(layerMap, THREE, layerName);
+    addSvgTextElement(el, doc, THREE, layerGroup);
+  }
+
+  const group = new THREE.Group();
+  const sortedLayers = [...layerMap.entries()].sort((a, b) => {
+    const aSketch = a[1].userData.isSketchLayer ? 0 : 1;
+    const bSketch = b[1].userData.isSketchLayer ? 0 : 1;
+    if (aSketch !== bSketch) return aSketch - bSketch;
+    return a[0].localeCompare(b[0]);
+  });
+  for (const [, layerGroup] of sortedLayers) {
+    if (layerGroup.children.length) group.add(layerGroup);
+  }
+
+  if (!group.children.length) {
+    const { paths } = loader.parse(svgString);
+    const fallback = new THREE.Group();
+    fallback.name = '0';
+    fallback.userData.layerName = '0';
+    addSvgPathsToGroup(paths, THREE, fallback);
+    if (fallback.children.length) group.add(fallback);
+  }
+
   return group;
 }
 
@@ -618,6 +721,7 @@ class DxfSceneBuilder {
       const layerGroup = new this.THREE.Group();
       layerGroup.name = layerName;
       layerGroup.userData.layerName = layerName;
+      layerGroup.userData.isSketchLayer = isSketchLayerName(layerName);
 
       for (const [color, segments] of batches.lineBatches) {
         if (!segments.length) continue;
@@ -677,7 +781,7 @@ class DxfSceneBuilder {
     const height = getTextHeight(entity);
     const rotation = (entity.rotation ?? entity.angle ?? 0) * (Math.PI / 180);
     const layerName = layer || entity.layer || '0';
-    const sprite = createTextSprite(this.THREE, text, height, color);
+    const sprite = createTextSprite(this.THREE, text, height, color, getSpriteAnchor(entity));
     if (!sprite) return;
     sprite.position.set(pos.x, pos.y, 0.5);
     sprite.material.rotation = rotation;
