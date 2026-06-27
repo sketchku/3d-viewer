@@ -90,6 +90,19 @@ html, body {
   margin-top: 2px;
 }
 
+.app-version {
+  margin-inline-start: 6px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--accent);
+  white-space: nowrap;
+}
+
 .panel {
   padding: 16px 18px;
   border-bottom: 1px solid var(--border);
