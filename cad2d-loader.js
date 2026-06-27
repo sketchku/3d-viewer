@@ -227,6 +227,192 @@ export function applyCadDisplayColors(group, { bgColor, lineColor } = {}) {
   });
 }
 
+function isCadLineObject(obj) {
+  return obj?.isLine || obj?.isLineSegments || obj?.isLineLoop;
+}
+
+function getLayerNameFromObject(obj) {
+  return obj?.userData?.layerName
+    || obj?.parent?.userData?.layerName
+    || obj?.name
+    || '';
+}
+
+export function getCadFrameBounds(root, THREE) {
+  if (!root || !THREE) return null;
+  const box = new THREE.Box3();
+  let hasFrame = false;
+
+  root.traverse((child) => {
+    const layerName = getLayerNameFromObject(child);
+    if (!isFrameLayerName(layerName)) return;
+    if (child.isGroup && child.children.length) {
+      const layerBox = new THREE.Box3().setFromObject(child);
+      if (!layerBox.isEmpty()) {
+        box.union(layerBox);
+        hasFrame = true;
+      }
+      return;
+    }
+    if (!isCadLineObject(child) || !child.geometry) return;
+    child.geometry.computeBoundingBox?.();
+    if (!child.geometry.boundingBox) return;
+    const geomBox = child.geometry.boundingBox.clone();
+    geomBox.applyMatrix4(child.matrixWorld);
+    box.union(geomBox);
+    hasFrame = true;
+  });
+
+  return hasFrame && !box.isEmpty() ? box : null;
+}
+
+function collectCadTextSprites(root) {
+  const texts = [];
+  root.traverse((child) => {
+    if (!child.isSprite || !child.material) return;
+    texts.push({
+      x: child.position.x,
+      y: child.position.y,
+      rotation: child.userData?.cadTextRotation ?? child.material.rotation ?? 0,
+    });
+  });
+  return texts;
+}
+
+function normalizeAngle(angle) {
+  const tau = Math.PI * 2;
+  return ((angle % tau) + tau) % tau;
+}
+
+function isTextUpright(angle) {
+  const rot = normalizeAngle(angle);
+  return rot <= Math.PI * 0.28 || rot >= Math.PI * 1.72;
+}
+
+function transformCadPoint(point, center, { flipY = false, rot180 = false } = {}) {
+  let x = point.x - center.x;
+  let y = point.y - center.y;
+  if (rot180) {
+    x = -x;
+    y = -y;
+  }
+  if (flipY) y = -y;
+  return { x: x + center.x, y: y + center.y };
+}
+
+function transformCadTextRotation(angle, { flipY = false, rot180 = false } = {}) {
+  let rot = angle;
+  if (rot180) rot += Math.PI;
+  if (flipY) rot = -rot;
+  return normalizeAngle(rot);
+}
+
+function scoreCadOrientation(texts, frameBox, center, orientation) {
+  if (!texts.length) return 0;
+  let score = 0;
+  const frame = frameBox
+    ? {
+      minX: frameBox.min.x,
+      minY: frameBox.min.y,
+      maxX: frameBox.max.x,
+      maxY: frameBox.max.y,
+    }
+    : null;
+
+  for (const text of texts) {
+    const rot = transformCadTextRotation(text.rotation, orientation);
+    if (isTextUpright(rot)) score += 2;
+    else if (Math.abs(rot - Math.PI) < Math.PI * 0.28) score -= 2;
+
+    if (!frame) continue;
+    const pos = transformCadPoint(text, center, orientation);
+    const width = Math.max(frame.maxX - frame.minX, 1e-6);
+    const height = Math.max(frame.maxY - frame.minY, 1e-6);
+    const relX = (pos.x - frame.minX) / width;
+    const relY = (pos.y - frame.minY) / height;
+    const inTitleBlock = relX > 0.55 && relY < 0.4;
+    if (inTitleBlock && isTextUpright(rot)) score += 4;
+    else if (inTitleBlock && !isTextUpright(rot)) score -= 3;
+  }
+  return score;
+}
+
+function applyCadOrientation(group, THREE, pivot, orientation) {
+  if (!orientation.flipY && !orientation.rot180) return;
+
+  const wrapper = new THREE.Group();
+  wrapper.name = '__cad_orientation__';
+  wrapper.position.copy(pivot);
+  if (orientation.flipY) wrapper.scale.y = -1;
+  if (orientation.rot180) wrapper.rotation.z = Math.PI;
+
+  const children = [...group.children];
+  for (const child of children) {
+    group.remove(child);
+    child.position.sub(pivot);
+    wrapper.add(child);
+  }
+  group.add(wrapper);
+
+  if (orientation.flipY) {
+    wrapper.traverse((child) => {
+      if (!child.isSprite || !child.material) return;
+      child.material.rotation = -child.material.rotation;
+      if (Number.isFinite(child.userData.cadTextRotation)) {
+        child.userData.cadTextRotation = -child.userData.cadTextRotation;
+      }
+    });
+  }
+}
+
+function storeCadFrameBox(group, frameBox) {
+  if (!frameBox || frameBox.isEmpty()) {
+    group.userData.cadFrameBox = null;
+    return;
+  }
+  group.userData.cadFrameBox = {
+    min: { x: frameBox.min.x, y: frameBox.min.y, z: frameBox.min.z },
+    max: { x: frameBox.max.x, y: frameBox.max.y, z: frameBox.max.z },
+  };
+}
+
+export function normalizeCadFrontView(cadGroup, THREE) {
+  if (!cadGroup || !THREE) return null;
+
+  const frameBox = getCadFrameBounds(cadGroup, THREE);
+  const fullBox = new THREE.Box3().setFromObject(cadGroup);
+  const fitBox = frameBox && !frameBox.isEmpty() ? frameBox : fullBox;
+  const center = fitBox.getCenter(new THREE.Vector3());
+  const texts = collectCadTextSprites(cadGroup);
+
+  const orientations = [
+    { flipY: false, rot180: false },
+    { flipY: true, rot180: false },
+    { flipY: false, rot180: true },
+    { flipY: true, rot180: true },
+  ];
+
+  let best = orientations[0];
+  let bestScore = -Infinity;
+  for (const orientation of orientations) {
+    const score = scoreCadOrientation(texts, frameBox, center, orientation);
+    if (score > bestScore) {
+      bestScore = score;
+      best = orientation;
+    }
+  }
+
+  if (best.flipY || best.rot180) {
+    applyCadOrientation(cadGroup, THREE, center, best);
+  }
+
+  cadGroup.userData.cadOrientation = best;
+  const orientedFrameBox = getCadFrameBounds(cadGroup, THREE)
+    || new THREE.Box3().setFromObject(cadGroup);
+  storeCadFrameBox(cadGroup, orientedFrameBox);
+  return orientedFrameBox;
+}
+
 function getSpriteAnchor(entity) {
   if (entity.attachmentPoint != null) {
     const ap = Number(entity.attachmentPoint);
@@ -543,6 +729,7 @@ export async function loadDxf(buffer, THREE, options = {}) {
   if (group.children.length === 0) {
     throw new Error(t('dxfNoShapes'));
   }
+  normalizeCadFrontView(group, THREE);
   return group;
 }
 
@@ -587,6 +774,8 @@ export async function loadDwg(buffer, THREE, { signal, onProgress, bgColor, line
   if (group.children.length === 0) {
     throw new Error(t('dwgNoShapes'));
   }
+  group.userData.cadSource = 'dwg';
+  normalizeCadFrontView(group, THREE);
   report(5, 5);
   return group;
 }
@@ -635,6 +824,7 @@ function ensureSvgLayerGroup(layerMap, THREE, layerName) {
     layerGroup.name = layerName;
     layerGroup.userData.layerName = layerName;
     layerGroup.userData.isSketchLayer = isSketchLayerName(layerName);
+    layerGroup.userData.isFrameLayer = isFrameLayerName(layerName);
     layerMap.set(layerName, layerGroup);
   }
   return layerMap.get(layerName);
@@ -693,7 +883,11 @@ function addSvgTextElement(el, doc, THREE, layerGroup, displayOptions = {}) {
   if (!sprite) return;
   sprite.position.set(x, -y, 0.5);
   const rotate = (el.getAttribute('transform') || '').match(/rotate\((-?\d+(?:\.\d+)?)/i);
-  if (rotate) sprite.material.rotation = Number(rotate[1]) * (Math.PI / 180);
+  if (rotate) {
+    const radians = -Number(rotate[1]) * (Math.PI / 180);
+    sprite.material.rotation = radians;
+    sprite.userData.cadTextRotation = radians;
+  }
   layerGroup.add(sprite);
 }
 
@@ -817,6 +1011,7 @@ class DxfSceneBuilder {
       layerGroup.name = layerName;
       layerGroup.userData.layerName = layerName;
       layerGroup.userData.isSketchLayer = isSketchLayerName(layerName);
+      layerGroup.userData.isFrameLayer = isFrameLayerName(layerName);
 
       for (const [color, batch] of batches.lineBatches) {
         if (!batch.segments.length) continue;
@@ -884,13 +1079,16 @@ class DxfSceneBuilder {
     const pos = getTextPosition(entity);
     if (!pos || pos.x == null || pos.y == null) return;
     const height = getTextHeight(entity);
-    const rotation = (entity.rotation ?? entity.angle ?? 0) * (Math.PI / 180);
+    const rawDegrees = entity.rotation ?? entity.angle ?? 0;
+    const rotation = rawDegrees * (Math.PI / 180);
     const layerName = layer || entity.layer || '0';
     const sprite = createTextSprite(this.THREE, text, height, color, getSpriteAnchor(entity));
     if (!sprite) return;
     sprite.position.set(pos.x, pos.y, 0.5);
     sprite.material.rotation = rotation;
     sprite.userData.layerName = layerName;
+    sprite.userData.cadTextRotation = rotation;
+    sprite.userData.cadTextDegrees = rawDegrees;
     this.getLayerBatches(layerName).textMarkers.push(sprite);
   }
 

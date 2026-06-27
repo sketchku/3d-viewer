@@ -10,12 +10,12 @@ import { PLYExporter } from 'three/addons/exporters/PLYExporter.js';
 import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
 import { SimplifyModifier } from 'three/addons/modifiers/SimplifyModifier.js';
 import { generateThreeViewDXF } from './drawing-export.js?v=2.4.1';
-import { t, getLanguage } from './i18n.js?v=2.6.4';
+import { t, getLanguage } from './i18n.js?v=2.6.5';
 import { initVisitorChat } from './visitor-chat.js?v=2.5.6';
 import { initViewerFeatures } from './viewer-features.js?v=2.4.1';
 import { initRecentFiles, saveRecentFile } from './recent-files.js?v=2.4.1';
 import { initModelTabs, captureModelThumbnail } from './model-tabs.js?v=2.6.1';
-import { initPartTree, tagPart } from './part-tree.js?v=2.6.4';
+import { initPartTree, tagPart } from './part-tree.js?v=2.6.5';
 import {
   resolveLoadStrategy,
   yieldToMain,
@@ -42,7 +42,7 @@ import { createBgPixels } from './bg-pixels.js?v=2.5.6';
 let cad2dModule = null;
 async function getCad2dModule() {
   if (!cad2dModule) {
-    cad2dModule = await import('./cad2d-loader.js?v=2.6.4');
+    cad2dModule = await import('./cad2d-loader.js?v=2.6.5');
   }
   return cad2dModule;
 }
@@ -361,6 +361,28 @@ function expandBoxWithSprites(box, object) {
     box.expandByPoint(new THREE.Vector3(minX, minY, child.position.z));
     box.expandByPoint(new THREE.Vector3(maxX, maxY, child.position.z));
   });
+}
+
+function getCad2dFitBox() {
+  const box = new THREE.Box3();
+  const stored = modelGroup.userData.cadFrameBox;
+  if (stored) {
+    box.set(
+      new THREE.Vector3(stored.min.x, stored.min.y, stored.min.z ?? 0),
+      new THREE.Vector3(stored.max.x, stored.max.y, stored.max.z ?? 0),
+    );
+    return box;
+  }
+  for (const child of modelGroup.children) {
+    const frameBox = child.userData?.cadFrameBox;
+    if (!frameBox) continue;
+    box.set(
+      new THREE.Vector3(frameBox.min.x, frameBox.min.y, frameBox.min.z ?? 0),
+      new THREE.Vector3(frameBox.max.x, frameBox.max.y, frameBox.max.z ?? 0),
+    );
+    return box;
+  }
+  return new THREE.Box3().setFromObject(modelGroup);
 }
 
 // ── Init ──
@@ -901,6 +923,7 @@ async function loadCAD2D(buffer, ext, { strategy, onProgress, signal } = {}) {
   }
   modelGroup.add(cadGroup);
   modelGroup.userData.is2d = true;
+  modelGroup.userData.cadFrameBox = cadGroup.userData.cadFrameBox || null;
 }
 
 async function addCadMesh(meshData, index, strategy, onProgress, total) {
@@ -1118,6 +1141,7 @@ function clearModel({ dispose = true } = {}) {
   modelGroup.position.set(0, 0, 0);
   modelGroup.rotation.set(0, 0, 0);
   modelGroup.userData.is2d = false;
+  modelGroup.userData.cadFrameBox = null;
   viewerFeatures?.onModelCleared();
   partTreeMgr?.clear();
 }
@@ -1125,22 +1149,31 @@ function clearModel({ dispose = true } = {}) {
 function fitToView() {
   if (modelGroup.children.length === 0) return;
 
-  const box = new THREE.Box3().setFromObject(modelGroup);
+  let box = modelGroup.userData.is2d
+    ? getCad2dFitBox()
+    : new THREE.Box3().setFromObject(modelGroup);
+  if (box.isEmpty()) box = new THREE.Box3().setFromObject(modelGroup);
   expandBoxWithSprites(box, modelGroup);
-  const center = box.getCenter(new THREE.Vector3());
-  const size = box.getSize(new THREE.Vector3());
+  let center = box.getCenter(new THREE.Vector3());
+  let size = box.getSize(new THREE.Vector3());
+  if (modelGroup.userData.is2d && (size.x < 1e-3 || size.y < 1e-3)) {
+    box = new THREE.Box3().setFromObject(modelGroup);
+    expandBoxWithSprites(box, modelGroup);
+    center = box.getCenter(new THREE.Vector3());
+    size = box.getSize(new THREE.Vector3());
+  }
   const maxDim = Math.max(size.x, size.y, size.z, 1);
 
   modelGroup.position.sub(center);
 
   if (viewMode === '2d') {
-    const padding = 1.15;
-    const viewW = Math.max(size.x, 1);
-    const viewH = Math.max(size.y, 1);
-    const viewSize = Math.max(viewW, viewH) * padding;
-    orthoCamera.userData.viewSize = viewSize;
+    const padding = 1.02;
     const viewport = canvas.parentElement;
-    const aspect = viewport.clientWidth / viewport.clientHeight;
+    const aspect = Math.max(viewport.clientWidth / viewport.clientHeight, 1e-6);
+    const viewW = Math.max(size.x, 1e-6);
+    const viewH = Math.max(size.y, 1e-6);
+    const viewSize = Math.max(viewH, viewW / aspect) * padding;
+    orthoCamera.userData.viewSize = viewSize;
     orthoCamera.left = -viewSize * aspect / 2;
     orthoCamera.right = viewSize * aspect / 2;
     orthoCamera.top = viewSize / 2;
