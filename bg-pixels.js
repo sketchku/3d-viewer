@@ -1,8 +1,8 @@
 /** Lightweight viewport background pixels: radial drift + elliptical orbits. */
 
-const COUNT = 60;
-const ORBIT_COUNT = 3;
-const LARGE_ORBIT_COUNT = 3;
+const COUNT = 30;
+const ORBIT_COUNT = 1;
+const LARGE_ORBIT_COUNT = 1;
 const SCREEN_REACH = 0.9;
 const DRIFT_RGB = [130, 148, 175];
 const ORBIT_COLORS_RGB = [
@@ -13,8 +13,8 @@ const ORBIT_COLORS_RGB = [
 const ORBIT_COLORS = ORBIT_COLORS_RGB.map(
   ([r, g, b]) => `rgba(${r}, ${g}, ${b}, 0.75)`,
 );
-const DEBRIS_PER_HIT = 5;
-const MAX_DEBRIS = 240;
+const DEBRIS_PER_HIT = 2;
+const MAX_DEBRIS = 120;
 const PIXEL_SIZE_SCALE = 5 / 3;
 const SLOW_AFTER_MS = 10_000;
 const MIN_SPEED_FACTOR = 0.12;
@@ -34,7 +34,7 @@ function spawnParticle() {
     y: (Math.random() - 0.5) * 8,
     vx: Math.cos(angle),
     vy: Math.sin(angle),
-    baseSpeed: (0.22 + Math.random() * 0.38) * 2,
+    baseSpeed: (0.22 + Math.random() * 0.38) * 1,
     bornAt: performance.now(),
     life: 0,
     maxLife: 1920 + Math.random() * 2400,
@@ -87,7 +87,7 @@ function spawnOrbit(base, index, large = false) {
     ry = rx / 3;
   }
 
-  const angular = (0.004 + Math.random() * 0.005) * 3;
+  const angular = (0.004 + Math.random() * 0.005) * 1.5;
   const baseSpeed = (large ? angular / 5 : angular / 2) * (Math.random() > 0.5 ? 1 : -1);
 
   return {
@@ -135,7 +135,7 @@ function burstDebris(debris, x, y, vx, vy, rgb) {
     px /= len;
     py /= len;
 
-    const mag = speed * (0.35 + Math.random() * 0.85) + 0.4;
+    const mag = (speed * (0.35 + Math.random() * 0.85) + 0.4) * 0.5;
     debris.push({
       x,
       y,

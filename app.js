@@ -36,7 +36,7 @@ import {
   getConvertBackendsForExt,
 } from './cad-step-convert.js?v=2.5.0';
 import { isStaticWebDeployment } from './web-config.js?v=2.5.0';
-import { createBgPixels } from './bg-pixels.js?v=2.4.1';
+import { createBgPixels } from './bg-pixels.js?v=2.4.2';
 
 let cad2dModule = null;
 async function getCad2dModule() {
