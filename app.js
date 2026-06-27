@@ -10,12 +10,12 @@ import { PLYExporter } from 'three/addons/exporters/PLYExporter.js';
 import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
 import { SimplifyModifier } from 'three/addons/modifiers/SimplifyModifier.js';
 import { generateThreeViewDXF } from './drawing-export.js?v=2.4.1';
-import { t, getLanguage } from './i18n.js?v=2.6.6';
+import { t, getLanguage } from './i18n.js?v=2.6.7';
 import { initVisitorChat } from './visitor-chat.js?v=2.5.6';
 import { initViewerFeatures } from './viewer-features.js?v=2.4.1';
 import { initRecentFiles, saveRecentFile } from './recent-files.js?v=2.4.1';
 import { initModelTabs, captureModelThumbnail } from './model-tabs.js?v=2.6.1';
-import { initPartTree, tagPart } from './part-tree.js?v=2.6.6';
+import { initPartTree, tagPart } from './part-tree.js?v=2.6.7';
 import {
   resolveLoadStrategy,
   yieldToMain,
@@ -38,6 +38,7 @@ import {
 } from './cad-step-convert.js?v=2.5.0';
 import { isStaticWebDeployment } from './web-config.js?v=2.5.0';
 import { createBgPixels } from './bg-pixels.js?v=2.6.6';
+import { initColorPicker } from './color-picker.js?v=2.6.7';
 
 let cad2dModule = null;
 async function getCad2dModule() {
@@ -259,6 +260,7 @@ let viewerFeatures = null;
 let recentFilesMgr = null;
 let partTreeMgr = null;
 let modelTabsMgr = null;
+let colorPickerMgr = null;
 
 function getModelTabState() {
   if (!currentFile || modelGroup.children.length === 0) return null;
@@ -403,7 +405,13 @@ async function init() {
   applyDeploymentMode();
   document.addEventListener('languagechange', applyDeploymentMode);
   recentFilesMgr = initRecentFiles({ onOpenFile: loadFile, t });
-  partTreeMgr = initPartTree({ modelGroup, t, THREE });
+  colorPickerMgr = initColorPicker({ t });
+  partTreeMgr = initPartTree({
+    modelGroup,
+    t,
+    THREE,
+    openColorPicker: (opts) => colorPickerMgr.open(opts),
+  });
   modelTabsMgr = initModelTabs({
     t,
     THREE,
@@ -516,11 +524,6 @@ function openFilePicker() {
   fileInput.click();
 }
 
-const MODEL_COLOR_PRESETS = [
-  '#6b9bd1', '#e8eaed', '#00e5ff', '#ffd54f', '#69f0ae',
-  '#ff8a80', '#b388ff', '#ffffff', '#ff9800', '#f48fb1',
-];
-
 function getBgColor() {
   return document.getElementById('bg-color')?.value || '#1a1d23';
 }
@@ -529,13 +532,13 @@ function getModelColor() {
   return document.getElementById('model-color')?.value || '#6b9bd1';
 }
 
-function updateModelColorPresetSelection(hex) {
-  const container = document.getElementById('model-color-presets');
-  if (!container) return;
-  const normalized = hex.toLowerCase();
-  container.querySelectorAll('.color-preset-btn').forEach((btn) => {
-    btn.classList.toggle('active', btn.dataset.color?.toLowerCase() === normalized);
-  });
+function updateModelColorUI(hex) {
+  const input = document.getElementById('model-color');
+  const preview = document.getElementById('model-color-preview');
+  const label = document.getElementById('model-color-label');
+  if (input) input.value = hex;
+  if (preview) preview.style.backgroundColor = hex;
+  if (label) label.textContent = hex;
 }
 
 async function applyModelColor(hex) {
@@ -551,31 +554,23 @@ async function applyModelColor(hex) {
       lineColor: hex,
     });
   }
-  updateModelColorPresetSelection(hex);
+  updateModelColorUI(hex);
 }
 
-function initModelColorPresets() {
-  const container = document.getElementById('model-color-presets');
-  const input = document.getElementById('model-color');
-  if (!container || !input) return;
-
-  container.replaceChildren();
-  for (const hex of MODEL_COLOR_PRESETS) {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'color-preset-btn';
-    btn.style.backgroundColor = hex;
-    btn.title = hex;
-    btn.dataset.color = hex;
-    btn.setAttribute('role', 'option');
-    btn.setAttribute('aria-label', hex);
-    btn.addEventListener('click', () => {
-      input.value = hex;
-      applyModelColor(hex);
-    });
-    container.appendChild(btn);
+function flipModel(axis) {
+  if (modelGroup.children.length === 0) return;
+  if (axis === 'x') {
+    modelGroup.scale.x *= -1;
+  } else if (axis === 'y') {
+    modelGroup.scale.y *= -1;
+    if (modelGroup.userData.is2d) {
+      modelGroup.traverse((child) => {
+        if (child.isSprite?.material) {
+          child.material.rotation = -child.material.rotation;
+        }
+      });
+    }
   }
-  updateModelColorPresetSelection(input.value);
 }
 
 function setupUI() {
@@ -661,10 +656,15 @@ function setupUI() {
     }
     if (modelGroup.userData.is2d) applyModelColor(getModelColor());
   });
-  document.getElementById('model-color').addEventListener('input', (e) => {
-    applyModelColor(e.target.value);
+  document.getElementById('btn-model-color')?.addEventListener('click', () => {
+    colorPickerMgr?.open({
+      color: getModelColor(),
+      title: t('modelColor'),
+      onConfirm: (hex) => applyModelColor(hex),
+    });
   });
-  initModelColorPresets();
+  document.getElementById('btn-flip-x')?.addEventListener('click', () => flipModel('x'));
+  document.getElementById('btn-flip-y')?.addEventListener('click', () => flipModel('y'));
 
   btnSaveAs.addEventListener('click', saveAs);
   btnExport.addEventListener('click', openExportModal);
@@ -1155,6 +1155,7 @@ function clearModel({ dispose = true } = {}) {
   }
   modelGroup.position.set(0, 0, 0);
   modelGroup.rotation.set(0, 0, 0);
+  modelGroup.scale.set(1, 1, 1);
   modelGroup.userData.is2d = false;
   modelGroup.userData.cadFrameBox = null;
   modelGroup.userData.cadSource = null;
@@ -1231,6 +1232,7 @@ function resetView() {
     fitToView();
   }
   modelGroup.rotation.set(0, 0, 0);
+  modelGroup.scale.set(1, 1, 1);
 }
 
 function updateStats() {

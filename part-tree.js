@@ -20,7 +20,7 @@ function readLayerColor(object, fallback = '#e8eaed') {
   return hex || fallback;
 }
 
-export function initPartTree({ modelGroup, t, THREE }) {
+export function initPartTree({ modelGroup, t, THREE, openColorPicker }) {
   const panel = document.getElementById('tree-panel');
   const title = document.getElementById('tree-panel-title');
   const list = document.getElementById('tree-list');
@@ -171,14 +171,23 @@ export function initPartTree({ modelGroup, t, THREE }) {
 
       row.appendChild(cbLabel);
 
-      if (isLayerMode && Color) {
-        const swatch = document.createElement('input');
-        swatch.type = 'color';
-        swatch.className = 'tree-layer-color';
-        swatch.value = readLayerColor(entry.object, LAYER_PALETTE[entry.label] || '#e8eaed');
+      if (isLayerMode && Color && openColorPicker) {
+        const currentColor = readLayerColor(entry.object, LAYER_PALETTE[entry.label] || '#e8eaed');
+        const swatch = document.createElement('button');
+        swatch.type = 'button';
+        swatch.className = 'tree-layer-color tree-color-btn';
+        swatch.style.backgroundColor = currentColor;
         swatch.title = t('layerColor');
-        swatch.addEventListener('input', (e) => {
-          setLayerColor(entry.object, e.target.value);
+        swatch.setAttribute('aria-label', t('layerColor'));
+        swatch.addEventListener('click', () => {
+          openColorPicker({
+            color: readLayerColor(entry.object, LAYER_PALETTE[entry.label] || '#e8eaed'),
+            title: t('layerColor'),
+            onConfirm: (hex) => {
+              setLayerColor(entry.object, hex);
+              swatch.style.backgroundColor = hex;
+            },
+          });
         });
         row.appendChild(swatch);
       }

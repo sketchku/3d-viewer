@@ -140,9 +140,12 @@
           <input type="color" id="bg-color" value="#1a1d23" />
         </div>
         <div class="slider-group">
-          <label for="model-color" data-i18n="modelColor">모델 색상</label>
-          <input type="color" id="model-color" value="#6b9bd1" />
-          <div id="model-color-presets" class="color-presets" role="listbox" data-i18n-aria="modelColorPresets" aria-label="대표 색상"></div>
+          <label for="btn-model-color" data-i18n="modelColor">모델 색상</label>
+          <button type="button" id="btn-model-color" class="color-swatch-trigger">
+            <span id="model-color-preview" class="color-swatch-preview" style="background-color:#6b9bd1"></span>
+            <span id="model-color-label" class="color-swatch-label">#6b9bd1</span>
+          </button>
+          <input type="hidden" id="model-color" value="#6b9bd1" />
         </div>
       </section>
 
@@ -153,6 +156,10 @@
           <button type="button" id="btn-view-front" class="btn btn-sm" data-i18n="viewFront">정면</button>
           <button type="button" id="btn-view-right" class="btn btn-sm" data-i18n="viewRight">우측</button>
           <button type="button" id="btn-view-iso" class="btn btn-sm" data-i18n="viewIso">등각</button>
+        </div>
+        <div class="view-btn-grid flip-btn-grid">
+          <button type="button" id="btn-flip-x" class="btn btn-sm" data-i18n="flipHorizontal">좌우 반전</button>
+          <button type="button" id="btn-flip-y" class="btn btn-sm" data-i18n="flipVertical">상하 반전</button>
         </div>
         <button type="button" id="btn-screenshot" class="btn btn-sm btn-block" data-i18n="screenshot">스크린샷 저장</button>
         <div class="controls-grid">
@@ -313,6 +320,24 @@
     </div>
   </div>
 
+  <!-- 색상 선택 모달 -->
+  <div id="color-picker-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="color-picker-title">
+    <div class="modal-backdrop"></div>
+    <div class="modal-box">
+      <h3 id="color-picker-title" class="modal-title" data-i18n="modelColor">모델 색상</h3>
+      <div class="color-picker-current">
+        <input type="color" id="color-picker-custom" value="#6b9bd1" aria-label="Custom color" />
+        <span id="color-picker-hex" class="color-picker-hex">#6b9bd1</span>
+      </div>
+      <p class="modal-sub" data-i18n="modelColorPresets">대표 색상</p>
+      <div id="color-picker-presets" class="color-presets color-presets-modal"></div>
+      <div class="modal-actions">
+        <button type="button" id="color-picker-cancel" class="btn" data-i18n="cancel">취소</button>
+        <button type="button" id="color-picker-confirm" class="btn btn-primary" data-i18n="ok">확인</button>
+      </div>
+    </div>
+  </div>
+
   <!-- 알림 모달 -->
   <div id="alert-modal" class="modal hidden" role="alertdialog" aria-modal="true">
     <div class="modal-backdrop"></div>
@@ -422,7 +447,7 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/occt-import-js@0.0.23/dist/occt-import-js.js"></script>
-  <script type="module" src="i18n-boot.js?v=2.6.6"></script>
-  <script type="module" src="app.js?v=2.6.6"></script>
+  <script type="module" src="i18n-boot.js?v=2.6.7"></script>
+  <script type="module" src="app.js?v=2.6.7"></script>
 </body>
 </html>

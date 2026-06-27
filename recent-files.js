@@ -1,7 +1,7 @@
 const DB_NAME = '3d-viewer-recent';
 const DB_VERSION = 1;
 const STORE = 'files';
-const MAX_FILES = 10;
+const MAX_FILES = 20;
 const MAX_BYTES = 50 * 1024 * 1024;
 
 function openDb() {
