@@ -1,4 +1,7 @@
 const THUMB_SIZE = 44;
+const TAB_WIDTH = 52;
+const TAB_GAP = 6;
+const TAB_BAR_PAD = 12;
 
 function moveChildren(from, to) {
   while (from.children.length > 0) {
@@ -20,6 +23,10 @@ function shortName(name, max = 10) {
   const base = String(name || '').replace(/\.[^.]+$/, '');
   if (base.length <= max) return base;
   return `${base.slice(0, max - 1)}…`;
+}
+
+function sortByRecent(sessions) {
+  return [...sessions].sort((a, b) => b.lastAccessedAt - a.lastAccessedAt);
 }
 
 export function captureModelThumbnail(THREE, modelGroup) {
@@ -66,7 +73,6 @@ export function initModelTabs({
   t,
   THREE,
   modelGroup,
-  maxTabs = 4,
   captureThumbnail,
   getState,
   applyState,
@@ -79,6 +85,18 @@ export function initModelTabs({
   const sessions = [];
   let activeId = null;
   let switching = false;
+  let resizeObserver = null;
+
+  function getViewportWidth() {
+    const viewport = root.closest('.viewport') || root.parentElement;
+    return viewport?.clientWidth || window.innerWidth;
+  }
+
+  function computeMaxTabs() {
+    const slot = TAB_WIDTH + TAB_GAP;
+    const inner = Math.max(0, getViewportWidth() - 24 - TAB_BAR_PAD);
+    return Math.max(1, Math.floor((inner + TAB_GAP) / slot));
+  }
 
   function findSession(id) {
     return sessions.find((s) => s.id === id) || null;
@@ -93,13 +111,22 @@ export function initModelTabs({
   }
 
   function trimSessions() {
-    while (sessions.length > maxTabs) {
-      const victim = sessions.find((s) => s.id !== activeId) || sessions[sessions.length - 1];
+    const limit = computeMaxTabs();
+    while (sessions.length > limit) {
+      const candidates = sessions
+        .filter((s) => s.id !== activeId)
+        .sort((a, b) => a.lastAccessedAt - b.lastAccessedAt);
+      const victim = candidates[0] || sessions.find((s) => s.id !== activeId);
       if (!victim) break;
       const idx = sessions.indexOf(victim);
       if (idx >= 0) sessions.splice(idx, 1);
       disposeSession(victim);
     }
+  }
+
+  function touchSession(id) {
+    const session = findSession(id);
+    if (session) session.lastAccessedAt = Date.now();
   }
 
   function renderTabs() {
@@ -110,7 +137,7 @@ export function initModelTabs({
     }
     root.classList.remove('hidden');
 
-    for (const session of sessions) {
+    for (const session of sortByRecent(sessions)) {
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = `model-tab${session.id === activeId ? ' active' : ''}`;
@@ -144,7 +171,13 @@ export function initModelTabs({
     }
   }
 
+  function onViewportResize() {
+    trimSessions();
+    renderTabs();
+  }
+
   function snapshotFromState(state, holder, thumbnail) {
+    const now = Date.now();
     return {
       id: state.id,
       name: state.file.name,
@@ -156,6 +189,7 @@ export function initModelTabs({
       },
       thumbnail: thumbnail || state.thumbnail || null,
       holder,
+      lastAccessedAt: state.lastAccessedAt || now,
       is2d: state.is2d,
       viewMode: state.viewMode,
       modelPosition: state.modelPosition,
@@ -171,6 +205,8 @@ export function initModelTabs({
   }
 
   function upsertSession(snapshot) {
+    const now = Date.now();
+    snapshot.lastAccessedAt = now;
     const idx = sessions.findIndex((s) => s.id === snapshot.id);
     if (idx >= 0) {
       const prev = sessions[idx];
@@ -179,9 +215,9 @@ export function initModelTabs({
       }
       sessions.splice(idx, 1);
     }
-    sessions.unshift(snapshot);
-    trimSessions();
+    sessions.push(snapshot);
     activeId = snapshot.id;
+    trimSessions();
     renderTabs();
   }
 
@@ -232,7 +268,7 @@ export function initModelTabs({
         moveChildren(modelGroup, holder);
         const thumb = captureThumbnail?.(holder) || current?.thumbnail || null;
         const snapshot = snapshotFromState(
-          { ...state, id: activeId, thumbnail: thumb },
+          { ...state, id: activeId, thumbnail: thumb, lastAccessedAt: current?.lastAccessedAt },
           holder,
           thumb,
         );
@@ -242,6 +278,7 @@ export function initModelTabs({
 
       moveChildren(target.holder, modelGroup);
       activeId = id;
+      touchSession(id);
       applyState?.(target);
       renderTabs();
     } finally {
@@ -270,6 +307,14 @@ export function initModelTabs({
   root.addEventListener('pointerdown', (e) => e.stopPropagation());
   root.addEventListener('click', (e) => e.stopPropagation());
 
+  const viewport = root.closest('.viewport') || root.parentElement;
+  if (viewport && typeof ResizeObserver !== 'undefined') {
+    resizeObserver = new ResizeObserver(onViewportResize);
+    resizeObserver.observe(viewport);
+  } else {
+    window.addEventListener('resize', onViewportResize);
+  }
+
   return {
     stashCurrent,
     registerLoaded,
@@ -278,5 +323,9 @@ export function initModelTabs({
     removeActive,
     getActiveId: () => activeId,
     hasSessions: () => sessions.length > 0,
+    destroy: () => {
+      resizeObserver?.disconnect();
+      window.removeEventListener('resize', onViewportResize);
+    },
   };
 }

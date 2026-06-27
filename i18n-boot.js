@@ -1,3 +1,3 @@
-import { initI18n } from './i18n.js?v=2.6.0';
+import { initI18n } from './i18n.js?v=2.6.1';
 
 initI18n();
