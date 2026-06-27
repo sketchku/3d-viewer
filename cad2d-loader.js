@@ -149,6 +149,84 @@ export function isSketchLayerName(name) {
   return /sketch|스케치|profile|refgeom|rough|wire|contour|outline/i.test(String(name || ''));
 }
 
+export function isFrameLayerName(name) {
+  return /border|frame|title|sheet|도곽|틀/i.test(String(name || ''));
+}
+
+const FRAME_ACCENT = 0x00e5ff;
+const MIN_LINE_CONTRAST = 2.8;
+
+function normalizeHexColor(value, fallback = 0xe8eaed) {
+  if (value == null) return fallback;
+  if (typeof value === 'number') return value >>> 0;
+  const hex = String(value).trim();
+  if (!hex.startsWith('#')) return fallback;
+  const parsed = Number.parseInt(hex.slice(1), 16);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function colorToRgb(hex) {
+  const value = normalizeHexColor(hex);
+  return { r: (value >> 16) & 255, g: (value >> 8) & 255, b: value & 255 };
+}
+
+function relativeLuminance(hex) {
+  const { r, g, b } = colorToRgb(hex);
+  const [rs, gs, bs] = [r, g, b].map((channel) => {
+    const s = channel / 255;
+    return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * rs + 0.7152 * gs + 0.0722 * bs;
+}
+
+function contrastRatio(colorA, colorB) {
+  const lumA = relativeLuminance(colorA);
+  const lumB = relativeLuminance(colorB);
+  const lighter = Math.max(lumA, lumB);
+  const darker = Math.min(lumA, lumB);
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
+export function ensureVisibleLineColor(rawColor, bgColor, lineColor, { isFrame = false } = {}) {
+  const bg = normalizeHexColor(bgColor, 0x1a1d23);
+  const fallback = normalizeHexColor(lineColor, 0xe8eaed);
+  const raw = normalizeHexColor(rawColor, fallback);
+
+  if (isFrame) {
+    if (contrastRatio(FRAME_ACCENT, bg) >= MIN_LINE_CONTRAST) return FRAME_ACCENT;
+    return relativeLuminance(bg) > 0.5 ? 0x1565c0 : 0xff6d00;
+  }
+
+  if (contrastRatio(raw, bg) >= MIN_LINE_CONTRAST) return raw;
+  if (contrastRatio(fallback, bg) >= MIN_LINE_CONTRAST) return fallback;
+  return relativeLuminance(bg) > 0.5 ? 0x1a1d23 : 0xe8eaed;
+}
+
+function tagCadMaterial(material, rawColor, layerName) {
+  material.userData.cadRawColor = normalizeHexColor(rawColor);
+  material.userData.cadIsFrame = isFrameLayerName(layerName);
+}
+
+export function applyCadDisplayColors(group, { bgColor, lineColor } = {}) {
+  if (!group) return;
+  const bg = bgColor || '#1a1d23';
+  const line = lineColor || '#e8eaed';
+
+  group.traverse((child) => {
+    const material = child.material;
+    if (!material?.color) return;
+
+    const layerName = child.userData?.layerName
+      || child.parent?.userData?.layerName
+      || child.parent?.name
+      || '';
+    const rawColor = material.userData?.cadRawColor ?? material.color.getHex();
+    const isFrame = material.userData?.cadIsFrame ?? isFrameLayerName(layerName);
+    const nextColor = ensureVisibleLineColor(rawColor, bg, line, { isFrame });
+    material.color.setHex(nextColor);
+  });
+}
+
 function getSpriteAnchor(entity) {
   if (entity.attachmentPoint != null) {
     const ap = Number(entity.attachmentPoint);
@@ -448,7 +526,10 @@ export async function loadDxf(buffer, THREE, options = {}) {
   }
   const group = new THREE.Group();
   group.userData.is2d = true;
-  const builder = new DxfSceneBuilder(THREE, dxf);
+  const builder = new DxfSceneBuilder(THREE, dxf, {
+    bgColor: options.bgColor,
+    lineColor: options.lineColor,
+  });
   if (options.progressive) {
     await builder.buildAsync(group, {
       batchSize: options.dxfBatchSize,
@@ -465,7 +546,7 @@ export async function loadDxf(buffer, THREE, options = {}) {
   return group;
 }
 
-export async function loadDwg(buffer, THREE, { signal, onProgress } = {}) {
+export async function loadDwg(buffer, THREE, { signal, onProgress, bgColor, lineColor } = {}) {
   const report = (current, total) => onProgress?.(current, total);
 
   throwIfCancelled(signal);
@@ -501,7 +582,7 @@ export async function loadDwg(buffer, THREE, { signal, onProgress } = {}) {
   throwIfCancelled(signal);
   report(4, 5);
 
-  const group = svgToGroup(svg, THREE);
+  const group = svgToGroup(svg, THREE, { bgColor, lineColor });
   group.userData.is2d = true;
   if (group.children.length === 0) {
     throw new Error(t('dwgNoShapes'));
@@ -559,10 +640,18 @@ function ensureSvgLayerGroup(layerMap, THREE, layerName) {
   return layerMap.get(layerName);
 }
 
-function addSvgPathsToGroup(paths, THREE, targetGroup) {
+function addSvgPathsToGroup(paths, THREE, targetGroup, displayOptions = {}) {
+  const layerName = targetGroup.userData?.layerName || targetGroup.name || '0';
+  const bgColor = displayOptions.bgColor || '#1a1d23';
+  const lineColor = displayOptions.lineColor || '#e8eaed';
+
   for (const path of paths) {
-    const color = path.color || 0xffffff;
+    const rawColor = path.color || 0xffffff;
+    const color = ensureVisibleLineColor(rawColor, bgColor, lineColor, {
+      isFrame: isFrameLayerName(layerName),
+    });
     const material = new THREE.LineBasicMaterial({ color });
+    tagCadMaterial(material, rawColor, layerName);
 
     for (const subPath of path.subPaths) {
       const pts2d = subPath.getPoints(32);
@@ -586,7 +675,7 @@ function addSvgPathsToGroup(paths, THREE, targetGroup) {
   }
 }
 
-function addSvgTextElement(el, doc, THREE, layerGroup) {
+function addSvgTextElement(el, doc, THREE, layerGroup, displayOptions = {}) {
   const content = extractEntityText({ text: collectSvgTextContent(el) });
   if (!content) return;
 
@@ -595,7 +684,11 @@ function addSvgTextElement(el, doc, THREE, layerGroup) {
   const x = parseFloat(el.getAttribute('x') || '0') + parentT.x + selfT.x;
   const y = parseFloat(el.getAttribute('y') || '0') + parentT.y + selfT.y;
   const fontSize = parseFloat(el.getAttribute('font-size') || '12');
-  const color = hexColorFromCss(el.getAttribute('fill') || el.style?.fill, 0xe8eaed);
+  const layerName = layerGroup.userData?.layerName || layerGroup.name || '0';
+  const rawColor = hexColorFromCss(el.getAttribute('fill') || el.style?.fill, 0xe8eaed);
+  const color = ensureVisibleLineColor(rawColor, displayOptions.bgColor, displayOptions.lineColor, {
+    isFrame: isFrameLayerName(layerName),
+  });
   const sprite = createTextSprite(THREE, content, Math.max(fontSize, 0.05), color, { x: 0, y: 0 });
   if (!sprite) return;
   sprite.position.set(x, -y, 0.5);
@@ -604,7 +697,7 @@ function addSvgTextElement(el, doc, THREE, layerGroup) {
   layerGroup.add(sprite);
 }
 
-function svgToGroup(svgString, THREE) {
+function svgToGroup(svgString, THREE, displayOptions = {}) {
   const doc = new DOMParser().parseFromString(svgString, 'image/svg+xml');
   const loader = new SVGLoader();
   const layerMap = new Map();
@@ -628,7 +721,7 @@ function svgToGroup(svgString, THREE) {
     const fragment = `<svg xmlns="http://www.w3.org/2000/svg">${elements.map((el) => serializer.serializeToString(el)).join('')}</svg>`;
     try {
       const { paths } = loader.parse(fragment);
-      addSvgPathsToGroup(paths, THREE, layerGroup);
+      addSvgPathsToGroup(paths, THREE, layerGroup, displayOptions);
     } catch {
       // skip broken layer fragment
     }
@@ -637,7 +730,7 @@ function svgToGroup(svgString, THREE) {
   for (const el of doc.querySelectorAll('text')) {
     const layerName = resolveSvgLayerName(el, doc);
     const layerGroup = ensureSvgLayerGroup(layerMap, THREE, layerName);
-    addSvgTextElement(el, doc, THREE, layerGroup);
+    addSvgTextElement(el, doc, THREE, layerGroup, displayOptions);
   }
 
   const group = new THREE.Group();
@@ -656,7 +749,7 @@ function svgToGroup(svgString, THREE) {
     const fallback = new THREE.Group();
     fallback.name = '0';
     fallback.userData.layerName = '0';
-    addSvgPathsToGroup(paths, THREE, fallback);
+    addSvgPathsToGroup(paths, THREE, fallback, displayOptions);
     if (fallback.children.length) group.add(fallback);
   }
 
@@ -664,10 +757,12 @@ function svgToGroup(svgString, THREE) {
 }
 
 class DxfSceneBuilder {
-  constructor(THREE, dxf) {
+  constructor(THREE, dxf, options = {}) {
     this.THREE = THREE;
     this.dxf = dxf;
-    this.defaultColor = 0xe8eaed;
+    this.bgColor = options.bgColor || '#1a1d23';
+    this.lineColor = options.lineColor || '#e8eaed';
+    this.defaultColor = normalizeHexColor(this.lineColor, 0xe8eaed);
     this.layerColors = parseLayerColors(dxf);
     this.layerData = new Map();
     this.currentLayer = '0';
@@ -723,25 +818,27 @@ class DxfSceneBuilder {
       layerGroup.userData.layerName = layerName;
       layerGroup.userData.isSketchLayer = isSketchLayerName(layerName);
 
-      for (const [color, segments] of batches.lineBatches) {
-        if (!segments.length) continue;
+      for (const [color, batch] of batches.lineBatches) {
+        if (!batch.segments.length) continue;
         const positions = [];
-        for (const [a, b] of segments) {
+        for (const [a, b] of batch.segments) {
           positions.push(a.x, a.y, a.z ?? 0, b.x, b.y, b.z ?? 0);
         }
         const geometry = new this.THREE.BufferGeometry();
         geometry.setAttribute('position', new this.THREE.Float32BufferAttribute(positions, 3));
         const material = new this.THREE.LineBasicMaterial({ color });
+        tagCadMaterial(material, batch.rawColor, layerName);
         layerGroup.add(new this.THREE.LineSegments(geometry, material));
       }
-      for (const [color, loops] of batches.loopBatches) {
-        for (const points of loops) {
+      for (const [color, batch] of batches.loopBatches) {
+        for (const points of batch.loops) {
           if (points.length < 2) continue;
           const positions = [];
           for (const p of points) positions.push(p.x, p.y, p.z ?? 0);
           const geometry = new this.THREE.BufferGeometry();
           geometry.setAttribute('position', new this.THREE.Float32BufferAttribute(positions, 3));
           const material = new this.THREE.LineBasicMaterial({ color });
+          tagCadMaterial(material, batch.rawColor, layerName);
           layerGroup.add(new this.THREE.LineLoop(geometry, material));
         }
       }
@@ -765,12 +862,20 @@ class DxfSceneBuilder {
     return this.aciToHex(layerColor);
   }
 
-  getColor(entity) {
+  getRawColor(entity) {
     const cn = entity.colorNumber;
     if (cn === 0 || cn === 256) return this.getLayerColor(entity.layer);
     if (cn != null && cn > 0 && cn < ACI_COLORS.length) return ACI_COLORS[cn];
     if (entity.color != null) return entity.color;
     return this.getLayerColor(entity.layer);
+  }
+
+  getColor(entity) {
+    const layer = entity.layer || '0';
+    const raw = this.getRawColor(entity);
+    return ensureVisibleLineColor(raw, this.bgColor, this.lineColor, {
+      isFrame: isFrameLayerName(layer),
+    });
   }
 
   addTextMarker(_group, entity, color, layer) {
@@ -789,36 +894,39 @@ class DxfSceneBuilder {
     this.getLayerBatches(layerName).textMarkers.push(sprite);
   }
 
-  queueLine(points, color, layer, closed = false) {
+  queueLine(points, color, layer, closed = false, rawColor = color) {
     const valid = points.filter(hasValidCoord);
     if (valid.length < 2) return;
     const { lineBatches, loopBatches } = this.getLayerBatches(layer);
     if (closed) {
-      if (!loopBatches.has(color)) loopBatches.set(color, []);
-      loopBatches.get(color).push(valid);
+      if (!loopBatches.has(color)) loopBatches.set(color, { rawColor, loops: [] });
+      loopBatches.get(color).loops.push(valid);
       return;
     }
-    if (!lineBatches.has(color)) lineBatches.set(color, []);
+    if (!lineBatches.has(color)) lineBatches.set(color, { rawColor, segments: [] });
     const batch = lineBatches.get(color);
     for (let i = 0; i < valid.length - 1; i++) {
-      batch.push([valid[i], valid[i + 1]]);
+      batch.segments.push([valid[i], valid[i + 1]]);
     }
   }
 
-  addLine(group, points, color, layer, closed = false) {
-    this.queueLine(points, color, layer, closed);
+  addLine(group, points, color, layer, closed = false, rawColor = color) {
+    this.queueLine(points, color, layer, closed, rawColor);
   }
 
   addEntity(group, entity, depth = 0) {
     if (depth > 20 || !entity?.type) return;
-    const color = this.getColor(entity);
     const layer = entity.layer || '0';
+    const rawColor = this.getRawColor(entity);
+    const color = ensureVisibleLineColor(rawColor, this.bgColor, this.lineColor, {
+      isFrame: isFrameLayerName(layer),
+    });
 
     switch (entity.type) {
       case 'LINE': {
         const endpoints = getLineEndpoints(entity);
         if (!endpoints) break;
-        this.addLine(group, [endpoints.start, endpoints.end], color, layer);
+        this.addLine(group, [endpoints.start, endpoints.end], color, layer, false, rawColor);
         break;
       }
 
@@ -838,19 +946,19 @@ class DxfSceneBuilder {
           }
         }
         const closed = entity.closed || (entity.flag & 1) === 1;
-        this.addLine(group, points, color, layer, closed);
+        this.addLine(group, points, color, layer, closed, rawColor);
         break;
       }
 
       case 'CIRCLE': {
         if (!hasValidCoord(entity.center) || !Number.isFinite(entity.radius)) break;
-        this.addLine(group, circlePoints(entity.center, entity.radius, 64), color, layer, true);
+        this.addLine(group, circlePoints(entity.center, entity.radius, 64), color, layer, true, rawColor);
         break;
       }
 
       case 'ARC': {
         if (!hasValidCoord(entity.center) || !Number.isFinite(entity.radius)) break;
-        this.addLine(group, arcPoints(entity.center, entity.radius, entity.startAngle, entity.endAngle, 48), color, layer);
+        this.addLine(group, arcPoints(entity.center, entity.radius, entity.startAngle, entity.endAngle, 48), color, layer, false, rawColor);
         break;
       }
 
@@ -860,14 +968,14 @@ class DxfSceneBuilder {
         const rx = Math.hypot(major.x, major.y);
         const ry = rx * (entity.axisRatio ?? entity.minorAxisRatio ?? 1);
         const rot = Math.atan2(major.y, major.x);
-        this.addLine(group, ellipsePoints(entity.center, rx, ry, rot, 64), color, layer, true);
+        this.addLine(group, ellipsePoints(entity.center, rx, ry, rot, 64), color, layer, true, rawColor);
         break;
       }
 
       case 'SPLINE': {
         const cps = (entity.controlPoints || entity.fitPoints || []).filter(hasValidCoord);
         if (cps.length >= 2) {
-          this.addLine(group, cps.map((p) => ({ x: p.x, y: p.y, z: p.z ?? 0 })), color, layer);
+          this.addLine(group, cps.map((p) => ({ x: p.x, y: p.y, z: p.z ?? 0 })), color, layer, false, rawColor);
         }
         break;
       }
@@ -876,8 +984,8 @@ class DxfSceneBuilder {
         if (entity.position) {
           const s = 0.5;
           const p = entity.position;
-          this.addLine(group, [{ x: p.x - s, y: p.y, z: p.z ?? 0 }, { x: p.x + s, y: p.y, z: p.z ?? 0 }], color, layer);
-          this.addLine(group, [{ x: p.x, y: p.y - s, z: p.z ?? 0 }, { x: p.x, y: p.y + s, z: p.z ?? 0 }], color, layer);
+          this.addLine(group, [{ x: p.x - s, y: p.y, z: p.z ?? 0 }, { x: p.x + s, y: p.y, z: p.z ?? 0 }], color, layer, false, rawColor);
+          this.addLine(group, [{ x: p.x, y: p.y - s, z: p.z ?? 0 }, { x: p.x, y: p.y + s, z: p.z ?? 0 }], color, layer, false, rawColor);
         }
         break;
 
@@ -925,7 +1033,7 @@ class DxfSceneBuilder {
       case 'SOLID': {
         const verts = [entity.first, entity.second, entity.third, entity.fourth].filter(hasValidCoord);
         if (verts.length >= 3) {
-          this.addLine(group, verts.map((v) => ({ x: v.x, y: v.y, z: v.z ?? 0 })), color, layer, true);
+          this.addLine(group, verts.map((v) => ({ x: v.x, y: v.y, z: v.z ?? 0 })), color, layer, true, rawColor);
         }
         break;
       }

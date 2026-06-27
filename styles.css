@@ -579,6 +579,38 @@ html, body {
   padding: 2px 4px;
 }
 
+.color-presets {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.color-preset-btn {
+  width: 100%;
+  aspect-ratio: 1;
+  min-height: 28px;
+  border: 2px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  padding: 0;
+  transition: border-color 0.15s, transform 0.1s;
+}
+
+.color-preset-btn:hover {
+  transform: scale(1.06);
+}
+
+.color-preset-btn.active {
+  border-color: var(--accent, #6b9bd1);
+  box-shadow: 0 0 0 1px var(--bg-panel, #252830);
+}
+
+.color-preset-btn:focus-visible {
+  outline: 2px solid var(--accent, #6b9bd1);
+  outline-offset: 2px;
+}
+
 /* Stats */
 .stats {
   display: grid;

@@ -10,12 +10,12 @@ import { PLYExporter } from 'three/addons/exporters/PLYExporter.js';
 import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
 import { SimplifyModifier } from 'three/addons/modifiers/SimplifyModifier.js';
 import { generateThreeViewDXF } from './drawing-export.js?v=2.4.1';
-import { t, getLanguage } from './i18n.js?v=2.6.3';
+import { t, getLanguage } from './i18n.js?v=2.6.4';
 import { initVisitorChat } from './visitor-chat.js?v=2.5.6';
 import { initViewerFeatures } from './viewer-features.js?v=2.4.1';
 import { initRecentFiles, saveRecentFile } from './recent-files.js?v=2.4.1';
 import { initModelTabs, captureModelThumbnail } from './model-tabs.js?v=2.6.1';
-import { initPartTree, tagPart } from './part-tree.js?v=2.6.3';
+import { initPartTree, tagPart } from './part-tree.js?v=2.6.4';
 import {
   resolveLoadStrategy,
   yieldToMain,
@@ -42,7 +42,7 @@ import { createBgPixels } from './bg-pixels.js?v=2.5.6';
 let cad2dModule = null;
 async function getCad2dModule() {
   if (!cad2dModule) {
-    cad2dModule = await import('./cad2d-loader.js?v=2.6.3');
+    cad2dModule = await import('./cad2d-loader.js?v=2.6.4');
   }
   return cad2dModule;
 }
@@ -484,6 +484,68 @@ function openFilePicker() {
   fileInput.click();
 }
 
+const MODEL_COLOR_PRESETS = [
+  '#6b9bd1', '#e8eaed', '#00e5ff', '#ffd54f', '#69f0ae',
+  '#ff8a80', '#b388ff', '#ffffff', '#ff9800', '#f48fb1',
+];
+
+function getBgColor() {
+  return document.getElementById('bg-color')?.value || '#1a1d23';
+}
+
+function getModelColor() {
+  return document.getElementById('model-color')?.value || '#6b9bd1';
+}
+
+function updateModelColorPresetSelection(hex) {
+  const container = document.getElementById('model-color-presets');
+  if (!container) return;
+  const normalized = hex.toLowerCase();
+  container.querySelectorAll('.color-preset-btn').forEach((btn) => {
+    btn.classList.toggle('active', btn.dataset.color?.toLowerCase() === normalized);
+  });
+}
+
+async function applyModelColor(hex) {
+  const color = new THREE.Color(hex);
+  if (!modelGroup.userData.is2d) {
+    modelGroup.traverse((child) => {
+      if (child.material?.color) child.material.color.copy(color);
+    });
+  } else {
+    const cad2d = await getCad2dModule();
+    cad2d.applyCadDisplayColors(modelGroup, {
+      bgColor: getBgColor(),
+      lineColor: hex,
+    });
+  }
+  updateModelColorPresetSelection(hex);
+}
+
+function initModelColorPresets() {
+  const container = document.getElementById('model-color-presets');
+  const input = document.getElementById('model-color');
+  if (!container || !input) return;
+
+  container.replaceChildren();
+  for (const hex of MODEL_COLOR_PRESETS) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'color-preset-btn';
+    btn.style.backgroundColor = hex;
+    btn.title = hex;
+    btn.dataset.color = hex;
+    btn.setAttribute('role', 'option');
+    btn.setAttribute('aria-label', hex);
+    btn.addEventListener('click', () => {
+      input.value = hex;
+      applyModelColor(hex);
+    });
+    container.appendChild(btn);
+  }
+  updateModelColorPresetSelection(input.value);
+}
+
 function setupUI() {
   if (!fileInput || !dropZone) {
     showAlert(t('initErrorTitle'), t('initErrorUINotFound'));
@@ -562,13 +624,12 @@ function setupUI() {
   document.getElementById('btn-fit').addEventListener('click', fitToView);
   document.getElementById('bg-color').addEventListener('input', (e) => {
     bgPixels.setColor(e.target.value);
+    if (modelGroup.userData.is2d) applyModelColor(getModelColor());
   });
   document.getElementById('model-color').addEventListener('input', (e) => {
-    const color = new THREE.Color(e.target.value);
-    modelGroup.traverse((child) => {
-      if (child.material?.color) child.material.color.copy(color);
-    });
+    applyModelColor(e.target.value);
   });
+  initModelColorPresets();
 
   btnSaveAs.addEventListener('click', saveAs);
   btnExport.addEventListener('click', openExportModal);
@@ -813,6 +874,10 @@ async function loadCAD2D(buffer, ext, { strategy, onProgress, signal } = {}) {
 
   let cadGroup;
   try {
+    const cadColorOpts = {
+      bgColor: getBgColor(),
+      lineColor: getModelColor(),
+    };
     if (ext === 'dxf') {
       cadGroup = await cad2d.loadDxf(buffer, THREE, {
         progressive: strategy?.progressive,
@@ -820,11 +885,13 @@ async function loadCAD2D(buffer, ext, { strategy, onProgress, signal } = {}) {
         yieldFn: () => yieldToMain(signal),
         signal,
         onProgress: (current, total) => onProgress?.(current, total, 'entities'),
+        ...cadColorOpts,
       });
     } else {
       cadGroup = await cad2d.loadDwg(buffer, THREE, {
         signal,
         onProgress: (current, total) => onProgress?.(current, total, 'entities'),
+        ...cadColorOpts,
       });
     }
   throwIfCancelled(signal);
