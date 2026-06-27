@@ -183,6 +183,17 @@
             <input type="checkbox" id="toggle-section" />
             <span data-i18n="sectionView">단면 보기</span>
           </label>
+          <label class="toggle">
+            <input type="checkbox" id="toggle-edit-mode" />
+            <span data-i18n="editMode">편집 모드</span>
+          </label>
+        </div>
+        <div id="edit-tools-controls" class="edit-tools-controls hidden">
+          <p class="edit-tools-hint" data-i18n="editModeHint">클릭: 선택 · 드래그: 이동 · Shift: 다중 선택 · Del: 삭제</p>
+          <div id="edit-selection-panel" class="edit-selection-panel hidden">
+            <span id="edit-selection-label" class="edit-selection-label">—</span>
+            <button type="button" id="btn-delete-selected" class="btn btn-sm btn-danger" data-i18n="editDelete">삭제</button>
+          </div>
         </div>
         <div id="measure-controls" class="measure-controls hidden">
           <div class="select-group">
@@ -459,7 +470,7 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/occt-import-js@0.0.23/dist/occt-import-js.js"></script>
-  <script type="module" src="i18n-boot.js?v=2.6.11"></script>
-  <script type="module" src="app.js?v=2.6.11"></script>
+  <script type="module" src="i18n-boot.js?v=2.6.12"></script>
+  <script type="module" src="app.js?v=2.6.12"></script>
 </body>
 </html>

@@ -20,7 +20,9 @@ function readLayerColor(object, fallback = '#e8eaed') {
   return hex || fallback;
 }
 
-export function initPartTree({ modelGroup, getModelRoot, t, THREE, openColorPicker }) {
+export function initPartTree({
+  modelGroup, getModelRoot, t, THREE, openColorPicker, onSelectObject,
+}) {
   const panel = document.getElementById('tree-panel');
   const title = document.getElementById('tree-panel-title');
   const list = document.getElementById('tree-list');
@@ -28,6 +30,14 @@ export function initPartTree({ modelGroup, getModelRoot, t, THREE, openColorPick
 
   const Color = THREE?.Color;
   const root = () => getModelRoot?.() || modelGroup;
+  let selectedIds = new Set();
+
+  document.addEventListener('editselectionchange', (e) => {
+    selectedIds = new Set(e.detail?.ids || []);
+    list.querySelectorAll('.tree-item').forEach((row) => {
+      row.classList.toggle('tree-item-selected', selectedIds.has(row.dataset.id));
+    });
+  });
 
   function setLayerColor(object, hex) {
     if (!Color) return;
@@ -155,7 +165,8 @@ export function initPartTree({ modelGroup, getModelRoot, t, THREE, openColorPick
       }
 
       const row = document.createElement('div');
-      row.className = `tree-item${entry.sketch ? ' tree-item-sketch' : ''}${entry.dwgEntity ? ' tree-item-dwg' : ''}`;
+      row.className = `tree-item${entry.sketch ? ' tree-item-sketch' : ''}${entry.dwgEntity ? ' tree-item-dwg' : ''}${selectedIds.has(entry.id) ? ' tree-item-selected' : ''}`;
+      row.dataset.id = entry.id;
 
       const cbLabel = document.createElement('label');
       cbLabel.className = 'tree-item-check';
@@ -171,6 +182,11 @@ export function initPartTree({ modelGroup, getModelRoot, t, THREE, openColorPick
       cbLabel.append(cb, span);
 
       row.appendChild(cbLabel);
+
+      span.addEventListener('click', (e) => {
+        e.preventDefault();
+        onSelectObject?.(entry.object, e.shiftKey);
+      });
 
       if (isLayerMode && Color && openColorPicker) {
         const currentColor = readLayerColor(entry.object, LAYER_PALETTE[entry.label] || '#e8eaed');

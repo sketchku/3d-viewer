@@ -12,10 +12,11 @@ import { SimplifyModifier } from 'three/addons/modifiers/SimplifyModifier.js';
 import { generateThreeViewDXF } from './drawing-export.js?v=2.4.1';
 import { t, getLanguage } from './i18n.js?v=2.6.10';
 import { initVisitorChat } from './visitor-chat.js?v=2.5.6';
-import { initViewerFeatures } from './viewer-features.js?v=2.4.1';
+import { initViewerFeatures } from './viewer-features.js?v=2.6.12';
 import { initRecentFiles, saveRecentFile } from './recent-files.js?v=2.4.1';
 import { initModelTabs, captureModelThumbnail } from './model-tabs.js?v=2.6.1';
 import { initMultiModelView } from './multi-model-view.js?v=2.6.11';
+import { initEditTools } from './edit-tools.js?v=2.6.12';
 import { initPartTree, tagPart } from './part-tree.js?v=2.6.7';
 import {
   resolveLoadStrategy,
@@ -264,6 +265,7 @@ let recentFilesMgr = null;
 let partTreeMgr = null;
 let modelTabsMgr = null;
 let multiModelMgr = null;
+let editToolsMgr = null;
 let colorPickerMgr = null;
 let currentLoadGroup = null;
 
@@ -457,6 +459,11 @@ async function init() {
     t,
     THREE,
     openColorPicker: (opts) => colorPickerMgr.open(opts),
+    onSelectObject: (obj, additive) => {
+      if (!editToolsMgr) return;
+      editToolsMgr.setEditMode(true);
+      editToolsMgr.selectByUuid(obj.uuid, additive);
+    },
   });
   modelTabsMgr = initModelTabs({
     t,
@@ -473,6 +480,25 @@ async function init() {
     onActiveChange: applyMultiModelActive,
     onLayoutChange: () => fitToView(),
   });
+  editToolsMgr = initEditTools({
+    THREE,
+    canvas,
+    controls,
+    getActiveCamera: () => activeCamera,
+    getViewMode: () => viewMode,
+    getModelRoot: () => {
+      const active = multiModelMgr?.getActiveEntry();
+      if (active) return active.group;
+      return modelGroup;
+    },
+    getIs2d: () => !!modelGroup.userData.is2d,
+    t,
+    showToast,
+    onStructureChange: () => {
+      updateStats();
+      partTreeMgr?.refresh(modelGroup.userData.is2d ? 'layers' : 'parts');
+    },
+  });
   viewerFeatures = initViewerFeatures({
     scene,
     camera,
@@ -482,6 +508,8 @@ async function init() {
     modelGroup,
     getViewMode: () => viewMode,
     getActiveCamera: () => activeCamera,
+    getEditMode: () => editToolsMgr?.isEditMode() ?? false,
+    setEditMode: (on) => editToolsMgr?.setEditMode(on),
     t,
     showToast,
     downloadBlob,
@@ -994,6 +1022,7 @@ async function loadFile(file, options = {}) {
     }
 
     updateStats();
+    editToolsMgr?.onModelLoaded();
     saveRecentFile(file.name, ext, buffer);
     recentFilesMgr?.refresh();
     document.getElementById('btn-add-model')?.classList.toggle('hidden', modelGroup.children.length === 0);
@@ -1336,6 +1365,7 @@ function clearModel({ dispose = true } = {}) {
   modelGroup.userData.cadSource = null;
   updatePixelBackground(null);
   viewerFeatures?.onModelCleared();
+  editToolsMgr?.onModelCleared();
   partTreeMgr?.clear();
   document.getElementById('btn-add-model')?.classList.add('hidden');
 }

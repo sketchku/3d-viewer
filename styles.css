@@ -243,6 +243,58 @@ html, body {
   background: rgba(248, 113, 113, 0.12);
 }
 
+.btn-danger {
+  background: rgba(248, 113, 113, 0.15);
+  border: 1px solid rgba(248, 113, 113, 0.45);
+  color: #fca5a5;
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: rgba(248, 113, 113, 0.28);
+  border-color: #f87171;
+  color: #fff;
+}
+
+.btn-danger:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.edit-tools-controls {
+  margin-top: 8px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.edit-tools-hint {
+  margin: 0 0 8px;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+.edit-selection-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.edit-selection-label {
+  flex: 1;
+  font-size: 0.78rem;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#canvas.edit-mode {
+  cursor: default;
+}
+
 .btn-sm {
   padding: 6px 10px;
   font-size: 0.72rem;
@@ -423,6 +475,16 @@ html, body {
 
 .tree-item-sketch span {
   color: var(--text);
+}
+
+.tree-item-selected {
+  border-color: var(--accent) !important;
+  background: rgba(79, 143, 247, 0.12);
+}
+
+.tree-item-selected span {
+  color: var(--accent);
+  font-weight: 600;
 }
 
 .tree-item {

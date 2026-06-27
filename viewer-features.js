@@ -6,7 +6,7 @@ const _box = new THREE.Box3();
 export function initViewerFeatures(ctx) {
   const {
     scene, camera, controls, renderer, canvas, modelGroup,
-    getViewMode, getActiveCamera, t, showToast, downloadBlob,
+    getViewMode, getActiveCamera, getEditMode, setEditMode, t, showToast, downloadBlob,
   } = ctx;
 
   const raycaster = new THREE.Raycaster();
@@ -282,7 +282,7 @@ export function initViewerFeatures(ctx) {
   }
 
   function onMeasureClick(event) {
-    if (!measureMode || modelGroup.children.length === 0) return;
+    if (getEditMode?.() || !measureMode || modelGroup.children.length === 0) return;
     const rect = canvas.getBoundingClientRect();
     pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
     pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
@@ -363,6 +363,7 @@ export function initViewerFeatures(ctx) {
       canvas.style.cursor = measureMode ? 'crosshair' : '';
       setMeasureControlsVisible(measureMode);
       if (!measureMode) clearMeasurements();
+      if (measureMode) setEditMode?.(false);
     });
 
     document.getElementById('measure-type')?.addEventListener('change', (e) => {
