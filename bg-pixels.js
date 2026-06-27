@@ -1,8 +1,8 @@
 /** Lightweight viewport background pixels: radial drift + elliptical orbits. */
 
 const COUNT = 30;
-const ORBIT_COUNT = 1;
-const LARGE_ORBIT_COUNT = 1;
+const ORBIT_COUNT = 2;
+const LARGE_ORBIT_COUNT = 2;
 const SCREEN_REACH = 0.9;
 const DRIFT_RGB = [130, 148, 175];
 const ORBIT_COLORS_RGB = [
@@ -167,8 +167,12 @@ export function createBgPixels(canvas, viewport) {
   function resize() {
     w = viewport.clientWidth;
     h = viewport.clientHeight;
-    canvas.width = w;
-    canvas.height = h;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.max(1, Math.round(w * dpr));
+    canvas.height = Math.max(1, Math.round(h * dpr));
+    canvas.style.width = `${w}px`;
+    canvas.style.height = `${h}px`;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     maxDist = Math.hypot(w, h) * 0.52;
     orbits = initOrbits(Math.min(w, h));
     debris.length = 0;
@@ -277,7 +281,7 @@ export function createBgPixels(canvas, viewport) {
     for (const d of drifts) {
       if (deadDrift.has(d.index)) continue;
       const half = d.size * 0.5;
-      ctx.fillStyle = `rgba(130, 148, 175, ${d.fade * 0.42})`;
+      ctx.fillStyle = `rgba(130, 148, 175, ${d.fade * 0.58})`;
       ctx.fillRect((d.sx - half) | 0, (d.sy - half) | 0, d.size, d.size);
     }
 

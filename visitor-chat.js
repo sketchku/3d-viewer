@@ -1,5 +1,5 @@
 import { CHAT_CONFIG } from './chat-config.js?v=2.5.4';
-import { textForUpload, textForViewer } from './chat-translate.js?v=2.5.5';
+import { textForUpload, textForViewer } from './chat-translate.js?v=2.5.6';
 
 const STORAGE_KEY = '3d-viewer-visitor-chat';
 const NAME_KEY = '3d-viewer-visitor-name';
@@ -234,7 +234,7 @@ export async function initVisitorChat({ t, showToast, getLang }) {
     hintEl.textContent = `${modeHint} ${t('chatHintTranslate')}`;
   }
 
-  async function renderMessages() {
+  function renderMessages() {
     const gen = ++renderGen;
     const lang = getLang?.() || 'ko';
     messagesEl.innerHTML = '';
@@ -246,30 +246,32 @@ export async function initVisitorChat({ t, showToast, getLang }) {
       messagesEl.appendChild(empty);
     } else {
       for (const msg of messages) {
-        if (gen !== renderGen) return;
-
-        let displayText = msg.text;
-        try {
-          displayText = await textForViewer(msg, lang);
-        } catch (err) {
-          console.warn('Chat display translation failed:', err);
-        }
-        if (gen !== renderGen) return;
-
         const item = document.createElement('article');
         item.className = 'visitor-chat-message';
-        item.innerHTML = `
-          <header class="visitor-chat-message-head">
-            <strong class="visitor-chat-author">${escapeHtml(msg.name || t('chatAnonymous'))}</strong>
-            <time class="visitor-chat-time">${formatTime(msg.createdAt, lang)}</time>
-          </header>
-          <p class="visitor-chat-text">${escapeHtml(displayText)}</p>
+
+        const head = document.createElement('header');
+        head.className = 'visitor-chat-message-head';
+        head.innerHTML = `
+          <strong class="visitor-chat-author">${escapeHtml(msg.name || t('chatAnonymous'))}</strong>
+          <time class="visitor-chat-time">${formatTime(msg.createdAt, lang)}</time>
         `;
+
+        const textEl = document.createElement('p');
+        textEl.className = 'visitor-chat-text';
+        textEl.textContent = msg.text || '';
+
+        item.append(head, textEl);
         messagesEl.appendChild(item);
+
+        textForViewer(msg, lang)
+          .then((displayText) => {
+            if (gen !== renderGen) return;
+            if (displayText && displayText !== msg.text) textEl.textContent = displayText;
+          })
+          .catch((err) => console.warn('Chat display translation failed:', err));
       }
     }
 
-    if (gen !== renderGen) return;
     if (countEl) countEl.textContent = String(messages.length);
     messagesEl.scrollTop = messagesEl.scrollHeight;
   }
@@ -368,8 +370,21 @@ export async function initVisitorChat({ t, showToast, getLang }) {
   updateHint();
   if (store.mode === 'firebase' || store.mode === 'telegraph') {
     clearBtn?.classList.add('hidden');
+  } else {
+    console.warn('Visitor chat: using local storage fallback');
   }
-  await loadMessages();
+
+  try {
+    await loadMessages();
+  } catch (err) {
+    console.error('Chat load failed:', err);
+    messages = [];
+    renderMessages();
+    showToast?.(t('chatFirebaseError'), 'error');
+  }
+
+  setExpanded(true);
+  textInput.disabled = false;
 
   if (store.subscribe) {
     store.subscribe((rows) => {
