@@ -155,6 +155,7 @@ export function createBgPixels(canvas, viewport) {
   let h = 0;
   let maxDist = 1;
   let bgColor = '#1a1d23';
+  let enabled = true;
   let visible = document.visibilityState === 'visible';
   const particles = Array.from({ length: COUNT }, spawnParticle);
   const debris = [];
@@ -178,12 +179,26 @@ export function createBgPixels(canvas, viewport) {
     debris.length = 0;
   }
 
+  function paintSolid() {
+    if (w <= 0 || h <= 0) return;
+    ctx.fillStyle = bgColor;
+    ctx.fillRect(0, 0, w, h);
+  }
+
   function setColor(hex) {
     bgColor = hex;
+    if (!enabled) paintSolid();
+  }
+
+  function setEnabled(on) {
+    enabled = !!on;
+    canvas.style.display = enabled ? '' : 'none';
+    if (enabled) return;
+    paintSolid();
   }
 
   function tick() {
-    if (!visible || w <= 0 || h <= 0) return;
+    if (!enabled || !visible || w <= 0 || h <= 0) return;
 
     ctx.fillStyle = bgColor;
     ctx.fillRect(0, 0, w, h);
@@ -315,5 +330,5 @@ export function createBgPixels(canvas, viewport) {
 
   resize();
 
-  return { tick, resize, setColor };
+  return { tick, resize, setColor, setEnabled };
 }

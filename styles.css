@@ -669,6 +669,10 @@ html, body {
   overflow: hidden;
 }
 
+.viewport.viewport-solid-bg {
+  background: #1a1d23;
+}
+
 /* Model tabs (viewport top) */
 .model-tabs {
   position: absolute;

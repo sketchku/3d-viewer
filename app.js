@@ -10,12 +10,12 @@ import { PLYExporter } from 'three/addons/exporters/PLYExporter.js';
 import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
 import { SimplifyModifier } from 'three/addons/modifiers/SimplifyModifier.js';
 import { generateThreeViewDXF } from './drawing-export.js?v=2.4.1';
-import { t, getLanguage } from './i18n.js?v=2.6.5';
+import { t, getLanguage } from './i18n.js?v=2.6.6';
 import { initVisitorChat } from './visitor-chat.js?v=2.5.6';
 import { initViewerFeatures } from './viewer-features.js?v=2.4.1';
 import { initRecentFiles, saveRecentFile } from './recent-files.js?v=2.4.1';
 import { initModelTabs, captureModelThumbnail } from './model-tabs.js?v=2.6.1';
-import { initPartTree, tagPart } from './part-tree.js?v=2.6.5';
+import { initPartTree, tagPart } from './part-tree.js?v=2.6.6';
 import {
   resolveLoadStrategy,
   yieldToMain,
@@ -37,12 +37,12 @@ import {
   getConvertBackendsForExt,
 } from './cad-step-convert.js?v=2.5.0';
 import { isStaticWebDeployment } from './web-config.js?v=2.5.0';
-import { createBgPixels } from './bg-pixels.js?v=2.5.6';
+import { createBgPixels } from './bg-pixels.js?v=2.6.6';
 
 let cad2dModule = null;
 async function getCad2dModule() {
   if (!cad2dModule) {
-    cad2dModule = await import('./cad2d-loader.js?v=2.6.5');
+    cad2dModule = await import('./cad2d-loader.js?v=2.6.6');
   }
   return cad2dModule;
 }
@@ -171,8 +171,17 @@ renderer.toneMappingExposure = 1.2;
 
 const scene = new THREE.Scene();
 const bgPixels = createBgPixels(bgPixelsCanvas, canvas.parentElement);
+const viewportEl = canvas.parentElement;
 const bgColorInput = document.getElementById('bg-color');
 if (bgColorInput?.value) bgPixels.setColor(bgColorInput.value);
+
+function updatePixelBackground(ext) {
+  const isDwg = ext === 'dwg';
+  bgPixels.setEnabled(!isDwg);
+  if (!viewportEl) return;
+  viewportEl.classList.toggle('viewport-solid-bg', isDwg);
+  viewportEl.style.backgroundColor = isDwg ? getBgColor() : '';
+}
 
 const camera = new THREE.PerspectiveCamera(45, 1, 0.01, 1e7);
 camera.up.set(0, 0, 1);
@@ -325,6 +334,7 @@ function applyModelTabSession(session) {
   controls.update();
 
   const is2d = session.is2d;
+  updatePixelBackground(currentFile.ext);
   fileNameEl.textContent = currentFile.name;
   fileFormatEl.textContent = SUPPORTED_FORMATS[currentFile.ext] || currentFile.ext.toUpperCase();
   fileInfo.classList.remove('hidden');
@@ -646,6 +656,9 @@ function setupUI() {
   document.getElementById('btn-fit').addEventListener('click', fitToView);
   document.getElementById('bg-color').addEventListener('input', (e) => {
     bgPixels.setColor(e.target.value);
+    if (currentFile?.ext === 'dwg' && viewportEl) {
+      viewportEl.style.backgroundColor = e.target.value;
+    }
     if (modelGroup.userData.is2d) applyModelColor(getModelColor());
   });
   document.getElementById('model-color').addEventListener('input', (e) => {
@@ -924,6 +937,8 @@ async function loadCAD2D(buffer, ext, { strategy, onProgress, signal } = {}) {
   modelGroup.add(cadGroup);
   modelGroup.userData.is2d = true;
   modelGroup.userData.cadFrameBox = cadGroup.userData.cadFrameBox || null;
+  modelGroup.userData.cadSource = ext;
+  updatePixelBackground(ext);
 }
 
 async function addCadMesh(meshData, index, strategy, onProgress, total) {
@@ -1142,6 +1157,8 @@ function clearModel({ dispose = true } = {}) {
   modelGroup.rotation.set(0, 0, 0);
   modelGroup.userData.is2d = false;
   modelGroup.userData.cadFrameBox = null;
+  modelGroup.userData.cadSource = null;
+  updatePixelBackground(null);
   viewerFeatures?.onModelCleared();
   partTreeMgr?.clear();
 }

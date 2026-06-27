@@ -413,6 +413,137 @@ export function normalizeCadFrontView(cadGroup, THREE) {
   return orientedFrameBox;
 }
 
+function findCadContentRoot(cadGroup) {
+  const orient = cadGroup.children.find((child) => child.name === '__cad_orientation__');
+  return orient || cadGroup;
+}
+
+function expandSpriteBounds(box, sprite, THREE) {
+  const cx = sprite.center?.x ?? 0.5;
+  const cy = sprite.center?.y ?? 0.5;
+  const w = sprite.scale.x;
+  const h = sprite.scale.y;
+  box.set(
+    new THREE.Vector3(sprite.position.x - w * cx, sprite.position.y - h * cy, sprite.position.z),
+    new THREE.Vector3(sprite.position.x + w * (1 - cx), sprite.position.y + h * (1 - cy), sprite.position.z),
+  );
+}
+
+function getRenderableBounds(obj, THREE) {
+  const box = new THREE.Box3();
+  if (obj.isSprite) {
+    expandSpriteBounds(box, obj, THREE);
+    return box;
+  }
+  if (!obj.geometry) return null;
+  obj.geometry.computeBoundingBox?.();
+  if (!obj.geometry.boundingBox) return null;
+  box.copy(obj.geometry.boundingBox);
+  box.applyMatrix4(obj.matrixWorld);
+  return box;
+}
+
+function collectRenderableItems(root, THREE) {
+  const items = [];
+  root.traverse((child) => {
+    if (!child.isLine && !child.isLineSegments && !child.isLineLoop && !child.isSprite) return;
+    const box = getRenderableBounds(child, THREE);
+    if (!box || box.isEmpty()) return;
+    items.push({ object: child, box });
+  });
+  return items;
+}
+
+function boxSeparation(a, b) {
+  const dx = Math.max(0, Math.max(a.min.x - b.max.x, b.min.x - a.max.x));
+  const dy = Math.max(0, Math.max(a.min.y - b.max.y, b.min.y - a.max.y));
+  return Math.hypot(dx, dy);
+}
+
+function clusterRenderableItems(items, minGap) {
+  const parents = items.map((_, index) => index);
+  const find = (index) => {
+    if (parents[index] !== index) parents[index] = find(parents[index]);
+    return parents[index];
+  };
+  const union = (a, b) => {
+    const rootA = find(a);
+    const rootB = find(b);
+    if (rootA !== rootB) parents[rootB] = rootA;
+  };
+
+  for (let i = 0; i < items.length; i++) {
+    for (let j = i + 1; j < items.length; j++) {
+      if (boxSeparation(items[i].box, items[j].box) <= minGap) union(i, j);
+    }
+  }
+
+  const groups = new Map();
+  for (let i = 0; i < items.length; i++) {
+    const root = find(i);
+    if (!groups.has(root)) groups.set(root, []);
+    groups.get(root).push(items[i]);
+  }
+  return [...groups.values()];
+}
+
+function markDwgEntityGroups(groups) {
+  groups.forEach((group, index) => {
+    group.userData.isDwgEntityGroup = true;
+    group.userData.dwgViewIndex = index + 1;
+    if (!group.userData.layerName || group.userData.layerName === '0') {
+      group.userData.layerName = `View ${index + 1}`;
+    }
+  });
+}
+
+function splitDwgEntityGroups(cadGroup, THREE) {
+  const contentRoot = findCadContentRoot(cadGroup);
+  const layerGroups = contentRoot.children.filter(
+    (child) => child.isGroup && child.userData?.layerName && child.children.length > 0,
+  );
+
+  if (layerGroups.length > 1) {
+    markDwgEntityGroups(layerGroups);
+    cadGroup.userData.dwgEntityCount = layerGroups.length;
+    return layerGroups.length;
+  }
+
+  const items = collectRenderableItems(contentRoot, THREE);
+  if (items.length < 2) return 0;
+
+  const globalBox = new THREE.Box3();
+  for (const item of items) globalBox.union(item.box);
+  const size = globalBox.getSize(new THREE.Vector3());
+  const minGap = Math.max(size.x, size.y, 1) * 0.06;
+  const clusters = clusterRenderableItems(items, minGap);
+  if (clusters.length <= 1) {
+    if (layerGroups[0]) markDwgEntityGroups(layerGroups);
+    return layerGroups.length;
+  }
+
+  const clusterGroups = clusters.map((cluster, index) => {
+    const group = new THREE.Group();
+    group.name = `dwg-view-${index + 1}`;
+    group.userData.layerName = `View ${index + 1}`;
+    group.userData.isDwgEntityGroup = true;
+    group.userData.dwgViewIndex = index + 1;
+    for (const item of cluster) {
+      item.object.parent?.remove(item.object);
+      group.add(item.object);
+    }
+    return group;
+  });
+
+  for (const layerGroup of layerGroups) {
+    if (layerGroup.children.length === 0) contentRoot.remove(layerGroup);
+  }
+  for (const group of clusterGroups) contentRoot.add(group);
+
+  cadGroup.userData.dwgEntityCount = clusterGroups.length;
+  return clusterGroups.length;
+}
+
 function getSpriteAnchor(entity) {
   if (entity.attachmentPoint != null) {
     const ap = Number(entity.attachmentPoint);
@@ -769,13 +900,14 @@ export async function loadDwg(buffer, THREE, { signal, onProgress, bgColor, line
   throwIfCancelled(signal);
   report(4, 5);
 
-  const group = svgToGroup(svg, THREE, { bgColor, lineColor });
+  const group = svgToGroup(svg, THREE, { bgColor, lineColor, partitionGroups: true });
   group.userData.is2d = true;
   if (group.children.length === 0) {
     throw new Error(t('dwgNoShapes'));
   }
   group.userData.cadSource = 'dwg';
   normalizeCadFrontView(group, THREE);
+  splitDwgEntityGroups(group, THREE);
   report(5, 5);
   return group;
 }
@@ -799,6 +931,40 @@ function parseSvgTransform(node) {
   return { x: parts[0] || 0, y: parts[1] || 0 };
 }
 
+function sanitizeSvgGroupName(value) {
+  return String(value || '')
+    .trim()
+    .replace(/^#/, '')
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .slice(0, 48) || null;
+}
+
+function resolveSvgBlockGroup(el, doc) {
+  let node = el.parentElement;
+  while (node && node !== doc.documentElement) {
+    if (node.tagName?.toLowerCase() !== 'g') {
+      node = node.parentElement;
+      continue;
+    }
+    const candidates = [
+      node.getAttribute('lc:blockname'),
+      node.getAttribute('data-name'),
+      node.getAttribute('inkscape:label'),
+      node.getAttribute('id'),
+    ];
+    for (const raw of candidates) {
+      const name = sanitizeSvgGroupName(raw);
+      if (!name) continue;
+      if (/^(svg|defs|viewport|page|root)$/i.test(name)) continue;
+      if (/^layer[-_:]/i.test(name)) continue;
+      return name;
+    }
+    node = node.parentElement;
+  }
+  return null;
+}
+
 function resolveSvgLayerName(el, doc) {
   let node = el;
   while (node && node !== doc.documentElement) {
@@ -816,6 +982,14 @@ function resolveSvgLayerName(el, doc) {
     node = node.parentElement;
   }
   return '0';
+}
+
+function resolveSvgPartitionName(el, doc, partitionGroups = false) {
+  const layerName = resolveSvgLayerName(el, doc);
+  if (!partitionGroups) return layerName;
+  const blockName = resolveSvgBlockGroup(el, doc);
+  if (!blockName || blockName === layerName) return layerName;
+  return `${layerName} · ${blockName}`;
 }
 
 function ensureSvgLayerGroup(layerMap, THREE, layerName) {
@@ -897,14 +1071,15 @@ function svgToGroup(svgString, THREE, displayOptions = {}) {
   const layerMap = new Map();
   const shapeSelector = 'path,line,polyline,polygon,circle,ellipse';
   const shapeEls = [...doc.querySelectorAll(shapeSelector)];
+  const partitionGroups = !!displayOptions.partitionGroups;
 
   for (const el of shapeEls) {
-    ensureSvgLayerGroup(layerMap, THREE, resolveSvgLayerName(el, doc));
+    ensureSvgLayerGroup(layerMap, THREE, resolveSvgPartitionName(el, doc, partitionGroups));
   }
 
   const byLayer = new Map();
   for (const el of shapeEls) {
-    const layerName = resolveSvgLayerName(el, doc);
+    const layerName = resolveSvgPartitionName(el, doc, partitionGroups);
     if (!byLayer.has(layerName)) byLayer.set(layerName, []);
     byLayer.get(layerName).push(el);
   }
@@ -922,7 +1097,7 @@ function svgToGroup(svgString, THREE, displayOptions = {}) {
   }
 
   for (const el of doc.querySelectorAll('text')) {
-    const layerName = resolveSvgLayerName(el, doc);
+    const layerName = resolveSvgPartitionName(el, doc, partitionGroups);
     const layerGroup = ensureSvgLayerGroup(layerMap, THREE, layerName);
     addSvgTextElement(el, doc, THREE, layerGroup, displayOptions);
   }

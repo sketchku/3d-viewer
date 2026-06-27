@@ -43,20 +43,44 @@ export function initPartTree({ modelGroup, t, THREE }) {
     panel.classList.add('hidden');
   }
 
+  function makeLayerEntry(child) {
+    const layerName = child.userData.layerName;
+    const label = child.userData?.dwgViewIndex
+      ? t('dwgView', { n: child.userData.dwgViewIndex })
+      : layerName;
+    return {
+      id: child.uuid,
+      label,
+      object: child,
+      visible: child.visible,
+      sketch: isSketchLayer(layerName, child),
+      dwgEntity: !!child.userData?.isDwgEntityGroup,
+      dwgViewIndex: child.userData?.dwgViewIndex || 0,
+    };
+  }
+
+  function collectLayerEntries() {
+    const entries = [];
+    const seen = new Set();
+    for (const child of modelGroup.children) {
+      if (child.isGroup && child.userData?.layerName && !seen.has(child.uuid)) {
+        seen.add(child.uuid);
+        entries.push(makeLayerEntry(child));
+      }
+      if (!child.isGroup) continue;
+      for (const nested of child.children) {
+        if (!nested.isGroup || !nested.userData?.layerName || seen.has(nested.uuid)) continue;
+        seen.add(nested.uuid);
+        entries.push(makeLayerEntry(nested));
+      }
+    }
+    return entries;
+  }
+
   function buildEntries(mode) {
     const entries = [];
     if (mode === 'layers') {
-      modelGroup.traverse((child) => {
-        if (child.userData?.layerName && child.isGroup && child.parent === modelGroup) {
-          entries.push({
-            id: child.uuid,
-            label: child.userData.layerName,
-            object: child,
-            visible: child.visible,
-            sketch: isSketchLayer(child.userData.layerName, child),
-          });
-        }
-      });
+      entries.push(...collectLayerEntries());
       if (!entries.length) {
         entries.push({
           id: modelGroup.uuid,
@@ -64,9 +88,13 @@ export function initPartTree({ modelGroup, t, THREE }) {
           object: modelGroup,
           visible: modelGroup.visible,
           sketch: false,
+          dwgEntity: false,
+          dwgViewIndex: 0,
         });
       }
       entries.sort((a, b) => {
+        if (a.dwgEntity !== b.dwgEntity) return a.dwgEntity ? -1 : 1;
+        if (a.dwgEntity && b.dwgEntity) return a.dwgViewIndex - b.dwgViewIndex;
         if (a.sketch !== b.sketch) return a.sketch ? -1 : 1;
         return a.label.localeCompare(b.label);
       });
@@ -111,18 +139,22 @@ export function initPartTree({ modelGroup, t, THREE }) {
 
     for (const entry of entries) {
       if (isLayerMode) {
-        const section = entry.sketch ? 'sketch' : 'other';
+        const section = entry.dwgEntity ? 'dwg' : entry.sketch ? 'sketch' : 'other';
         if (section !== lastSection) {
           const hdr = document.createElement('div');
           hdr.className = `tree-section-title${section === 'sketch' ? ' tree-section-sketch' : ''}`;
-          hdr.textContent = section === 'sketch' ? t('layerSketchSection') : t('layerOtherSection');
+          hdr.textContent = section === 'dwg'
+            ? t('dwgEntitySection')
+            : section === 'sketch'
+              ? t('layerSketchSection')
+              : t('layerOtherSection');
           list.appendChild(hdr);
           lastSection = section;
         }
       }
 
       const row = document.createElement('div');
-      row.className = `tree-item${entry.sketch ? ' tree-item-sketch' : ''}`;
+      row.className = `tree-item${entry.sketch ? ' tree-item-sketch' : ''}${entry.dwgEntity ? ' tree-item-dwg' : ''}`;
 
       const cbLabel = document.createElement('label');
       cbLabel.className = 'tree-item-check';
