@@ -20,13 +20,14 @@ function readLayerColor(object, fallback = '#e8eaed') {
   return hex || fallback;
 }
 
-export function initPartTree({ modelGroup, t, THREE, openColorPicker }) {
+export function initPartTree({ modelGroup, getModelRoot, t, THREE, openColorPicker }) {
   const panel = document.getElementById('tree-panel');
   const title = document.getElementById('tree-panel-title');
   const list = document.getElementById('tree-list');
   if (!panel || !list) return { refresh: () => {}, clear: () => {} };
 
   const Color = THREE?.Color;
+  const root = () => getModelRoot?.() || modelGroup;
 
   function setLayerColor(object, hex) {
     if (!Color) return;
@@ -62,7 +63,7 @@ export function initPartTree({ modelGroup, t, THREE, openColorPicker }) {
   function collectLayerEntries() {
     const entries = [];
     const seen = new Set();
-    for (const child of modelGroup.children) {
+    for (const child of root().children) {
       if (child.isGroup && child.userData?.layerName && !seen.has(child.uuid)) {
         seen.add(child.uuid);
         entries.push(makeLayerEntry(child));
@@ -83,10 +84,10 @@ export function initPartTree({ modelGroup, t, THREE, openColorPicker }) {
       entries.push(...collectLayerEntries());
       if (!entries.length) {
         entries.push({
-          id: modelGroup.uuid,
+          id: root().uuid,
           label: '0',
-          object: modelGroup,
-          visible: modelGroup.visible,
+          object: root(),
+          visible: root().visible,
           sketch: false,
           dwgEntity: false,
           dwgViewIndex: 0,
@@ -100,7 +101,7 @@ export function initPartTree({ modelGroup, t, THREE, openColorPicker }) {
       });
     } else {
       let idx = 0;
-      modelGroup.traverse((child) => {
+      root().traverse((child) => {
         if (child.isMesh || child.isLine || child.isLineSegments || child.isLineLoop) {
           const name = child.userData?.partName || child.name || t('partDefault', { n: ++idx });
           entries.push({
@@ -117,7 +118,7 @@ export function initPartTree({ modelGroup, t, THREE, openColorPicker }) {
 
   function refresh(mode = 'parts') {
     list.innerHTML = '';
-    if (modelGroup.children.length === 0) {
+    if (root().children.length === 0) {
       panel.classList.add('hidden');
       return;
     }

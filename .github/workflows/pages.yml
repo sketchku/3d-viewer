@@ -30,7 +30,7 @@ jobs:
           cp index.html styles.css .nojekyll site/
           for f in app.js i18n.js i18n-boot.js version.js web-config.js chat-config.js chat-translate.js visitor-chat.js bg-pixels.js stl-loader.js \
             cad2d-loader.js ai-loader.js cad-step-convert.js cad-format-guide.js rhino-loader.js \
-            large-file-loader.js part-tree.js color-picker.js drawing-export.js viewer-features.js recent-files.js model-tabs.js; do
+            large-file-loader.js part-tree.js color-picker.js drawing-export.js viewer-features.js recent-files.js model-tabs.js multi-model-view.js; do
             cp "$f" site/
           done
           if [ -d samples ]; then cp -r samples site/; fi

@@ -20,7 +20,7 @@ New-Item -ItemType Directory -Path $AppDir -Force | Out-Null
 New-Item -ItemType Directory -Path (Join-Path $PortableRoot 'data') -Force | Out-Null
 
 # Copy app files
-$Include = @('index.html', 'app.js', 'i18n.js', 'i18n-boot.js', 'styles.css', 'bg-pixels.js', 'web-config.js', 'chat-config.js', 'chat-translate.js', 'visitor-chat.js', 'model-tabs.js', 'stl-loader.js', 'cad2d-loader.js', 'ai-loader.js', 'color-picker.js', 'drawing-export.js', 'viewer-features.js', 'recent-files.js', 'part-tree.js', 'large-file-loader.js', 'rhino-loader.js', 'cad-format-guide.js', 'cad-step-convert.js')
+$Include = @('index.html', 'app.js', 'i18n.js', 'i18n-boot.js', 'styles.css', 'bg-pixels.js', 'web-config.js', 'chat-config.js', 'chat-translate.js', 'visitor-chat.js', 'model-tabs.js', 'multi-model-view.js', 'stl-loader.js', 'cad2d-loader.js', 'ai-loader.js', 'color-picker.js', 'drawing-export.js', 'viewer-features.js', 'recent-files.js', 'part-tree.js', 'large-file-loader.js', 'rhino-loader.js', 'cad-format-guide.js', 'cad-step-convert.js')
 foreach ($file in $Include) {
     Copy-Item (Join-Path $Root $file) (Join-Path $AppDir $file) -Force
 }

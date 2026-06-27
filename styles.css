@@ -130,9 +130,117 @@ html, body {
   border: 0;
 }
 
+.open-file-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 8px;
+}
+
 .btn-open {
   width: 100%;
+  margin-top: 0;
+}
+
+.btn-open-secondary {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+}
+
+.btn-open-secondary:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(79, 143, 247, 0.08);
+}
+
+.btn-add-model {
+  width: 100%;
   margin-top: 8px;
+  background: transparent;
+  border: 1px dashed var(--border);
+  color: var(--text-muted);
+}
+
+.btn-add-model:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.multi-model-panel {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.multi-model-panel h3 {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin: 0 0 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.multi-model-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.multi-model-item {
+  display: grid;
+  grid-template-columns: 28px 1fr 28px;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 6px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.02);
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.multi-model-item.active {
+  border-color: var(--accent);
+  background: rgba(79, 143, 247, 0.1);
+}
+
+.multi-model-vis,
+.multi-model-remove,
+.multi-model-name {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-family: var(--font);
+  color: var(--text-muted);
+  padding: 2px;
+  border-radius: 6px;
+}
+
+.multi-model-vis:hover,
+.multi-model-remove:hover {
+  color: var(--accent);
+  background: rgba(79, 143, 247, 0.1);
+}
+
+.multi-model-name {
+  text-align: left;
+  font-size: 0.78rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text);
+}
+
+.multi-model-name:hover {
+  color: var(--accent);
+}
+
+.multi-model-remove:hover {
+  color: #f87171;
+  background: rgba(248, 113, 113, 0.12);
 }
 
 .btn-sm {

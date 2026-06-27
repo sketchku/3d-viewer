@@ -56,8 +56,16 @@
           <p data-i18n="dragOrClick">파일을 드래그하거나 클릭</p>
           <span id="supported-formats" class="formats" data-i18n="supportedFormatsWeb">.stp .stl .stla .stlb .3dm .obj .dxf .dwg · STEP/IGES/BREP</span>
         </label>
-        <input type="file" id="file-input" class="file-input-hidden" accept=".stp,.step,.stl,.stla,.stlb,.stl.gz,.obj,.ply,.glb,.gltf,.iges,.igs,.brep,.brp,.3dm,.dxf,.dwg,.ai,.sldprt,.sldasm,.slddrw,.ipt,.iam,.ipn,.f3d,.f3z,.prt,.asm,.drw,.catpart,.catproduct,.catdrawing,.cgr,.model" />
-        <button type="button" id="btn-open-file" class="btn btn-open" data-i18n="openFileBtn">파일 열기</button>
+        <input type="file" id="file-input" class="file-input-hidden" accept=".stp,.step,.stl,.stla,.stlb,.stl.gz,.obj,.ply,.glb,.gltf,.iges,.igs,.brep,.brp,.3dm,.dxf,.dwg,.ai,.sldprt,.sldasm,.slddrw,.ipt,.iam,.ipn,.f3d,.f3z,.prt,.asm,.drw,.catpart,.catproduct,.catdrawing,.cgr,.model" multiple />
+        <div class="open-file-actions">
+          <button type="button" id="btn-open-file" class="btn btn-open" data-i18n="openFileBtn">파일 열기</button>
+          <button type="button" id="btn-open-multi" class="btn btn-open btn-open-secondary" data-i18n="openMultiBtn">여러 파일</button>
+        </div>
+        <button type="button" id="btn-add-model" class="btn btn-add-model hidden" data-i18n="addModelBtn">모델 추가</button>
+        <section id="multi-model-panel" class="multi-model-panel hidden">
+          <h3 data-i18n="multiModelTitle">열린 모델</h3>
+          <div id="multi-model-list" class="multi-model-list"></div>
+        </section>
         <section id="recent-files-panel" class="recent-files hidden">
           <h3 data-i18n="recentFiles">최근 파일</h3>
           <div id="recent-files-list" class="recent-files-list"></div>
@@ -451,7 +459,7 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/occt-import-js@0.0.23/dist/occt-import-js.js"></script>
-  <script type="module" src="i18n-boot.js?v=2.6.10"></script>
-  <script type="module" src="app.js?v=2.6.10"></script>
+  <script type="module" src="i18n-boot.js?v=2.6.11"></script>
+  <script type="module" src="app.js?v=2.6.11"></script>
 </body>
 </html>

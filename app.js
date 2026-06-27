@@ -15,6 +15,7 @@ import { initVisitorChat } from './visitor-chat.js?v=2.5.6';
 import { initViewerFeatures } from './viewer-features.js?v=2.4.1';
 import { initRecentFiles, saveRecentFile } from './recent-files.js?v=2.4.1';
 import { initModelTabs, captureModelThumbnail } from './model-tabs.js?v=2.6.1';
+import { initMultiModelView } from './multi-model-view.js?v=2.6.11';
 import { initPartTree, tagPart } from './part-tree.js?v=2.6.7';
 import {
   resolveLoadStrategy,
@@ -262,7 +263,18 @@ let viewerFeatures = null;
 let recentFilesMgr = null;
 let partTreeMgr = null;
 let modelTabsMgr = null;
+let multiModelMgr = null;
 let colorPickerMgr = null;
+let currentLoadGroup = null;
+
+function getLoadGroup() {
+  return currentLoadGroup || modelGroup;
+}
+
+function getModelTarget() {
+  const active = multiModelMgr?.getActiveEntry();
+  return active?.group || modelGroup;
+}
 
 function getModelTabState() {
   if (!currentFile || modelGroup.children.length === 0) return null;
@@ -352,6 +364,33 @@ function applyModelTabSession(session) {
   viewerFeatures?.onModelLoaded();
 }
 
+function applyMultiModelActive(entry) {
+  if (!entry) {
+    currentFile = null;
+    btnSaveAs.disabled = true;
+    btnExport.disabled = true;
+    btnDrawing.disabled = true;
+    fileInfo.classList.add('hidden');
+    if (modelGroup.children.length === 0) emptyState.classList.remove('hidden');
+    partTreeMgr?.clear();
+    viewerFeatures?.onModelCleared();
+    return;
+  }
+
+  currentFile = { name: entry.name, ext: entry.ext, buffer: entry.buffer };
+  modelGroup.userData.is2d = entry.is2d;
+  updatePixelBackground(entry.ext);
+  fileNameEl.textContent = entry.name;
+  fileFormatEl.textContent = SUPPORTED_FORMATS[entry.ext] || entry.ext.toUpperCase();
+  fileInfo.classList.remove('hidden');
+  emptyState.classList.add('hidden');
+  btnSaveAs.disabled = false;
+  btnExport.disabled = entry.is2d;
+  btnDrawing.disabled = entry.is2d;
+  updateStats();
+  partTreeMgr?.refresh(entry.is2d ? 'layers' : 'parts');
+}
+
 function applyDeploymentMode() {
   const formatsEl = document.getElementById('supported-formats');
   if (formatsEl) {
@@ -410,6 +449,11 @@ async function init() {
   colorPickerMgr = initColorPicker({ t });
   partTreeMgr = initPartTree({
     modelGroup,
+    getModelRoot: () => {
+      const active = multiModelMgr?.getActiveEntry();
+      if (active) return active.group;
+      return modelGroup;
+    },
     t,
     THREE,
     openColorPicker: (opts) => colorPickerMgr.open(opts),
@@ -421,6 +465,13 @@ async function init() {
     captureThumbnail: (group) => captureModelThumbnail(THREE, group),
     getState: getModelTabState,
     applyState: applyModelTabSession,
+  });
+  multiModelMgr = initMultiModelView({
+    t,
+    THREE,
+    modelGroup,
+    onActiveChange: applyMultiModelActive,
+    onLayoutChange: () => fitToView(),
   });
   viewerFeatures = initViewerFeatures({
     scene,
@@ -521,9 +572,39 @@ function setViewMode(mode) {
 }
 
 // ── UI events ──
-function openFilePicker() {
+let filePickerMode = 'single';
+
+function openFilePicker(mode = 'single') {
   if (!fileInput) return;
+  filePickerMode = mode;
+  fileInput.multiple = mode !== 'single';
   fileInput.click();
+}
+
+async function loadFiles(files, options = {}) {
+  const list = Array.from(files || []).filter((f) => f?.size > 0);
+  if (!list.length) return;
+  if (list.length === 1 && !options.append) {
+    await loadFile(list[0], options);
+    return;
+  }
+
+  let loaded = 0;
+  for (let i = 0; i < list.length; i++) {
+    await loadFile(list[i], {
+      ...options,
+      append: i > 0 || options.append,
+      multiBatch: true,
+      batchIndex: i + 1,
+      batchTotal: list.length,
+    });
+    if (modelGroup.children.length > 0) loaded++;
+  }
+  if (loaded > 1) {
+    multiModelMgr?.layout();
+    fitToView();
+    showToast(t('multiModelLoaded', { count: loaded }), 'info');
+  }
 }
 
 function getBgColor() {
@@ -544,14 +625,15 @@ function updateModelColorUI(hex) {
 }
 
 async function applyModelColor(hex) {
+  const target = getModelTarget();
   const color = new THREE.Color(hex);
-  if (!modelGroup.userData.is2d) {
-    modelGroup.traverse((child) => {
+  if (!target.userData.is2d) {
+    target.traverse((child) => {
       if (child.material?.color) child.material.color.copy(color);
     });
   } else {
     const cad2d = await getCad2dModule();
-    cad2d.applyCadDisplayColors(modelGroup, {
+    cad2d.applyCadDisplayColors(target, {
       bgColor: getBgColor(),
       lineColor: hex,
     });
@@ -560,13 +642,14 @@ async function applyModelColor(hex) {
 }
 
 function flipModel(axis) {
-  if (modelGroup.children.length === 0) return;
+  const target = getModelTarget();
+  if (target.children.length === 0) return;
   if (axis === 'x') {
-    modelGroup.scale.x *= -1;
+    target.scale.x *= -1;
   } else if (axis === 'y') {
-    modelGroup.scale.y *= -1;
-    if (modelGroup.userData.is2d) {
-      modelGroup.traverse((child) => {
+    target.scale.y *= -1;
+    if (target.userData.is2d) {
+      target.traverse((child) => {
         if (child.isSprite?.material) {
           child.material.rotation = -child.material.rotation;
         }
@@ -582,13 +665,33 @@ function setupUI() {
   }
 
   fileInput.addEventListener('change', (e) => {
-    if (e.target.files?.[0]) loadFile(e.target.files[0]);
+    const files = e.target.files;
+    if (!files?.length) return;
+    if (filePickerMode === 'add') {
+      loadFiles(files, { append: true });
+    } else if (files.length > 1 || filePickerMode === 'multi') {
+      loadFiles(files);
+    } else {
+      loadFile(files[0]);
+    }
     e.target.value = '';
+    filePickerMode = 'single';
+    fileInput.multiple = false;
   });
 
   document.getElementById('btn-open-file')?.addEventListener('click', (e) => {
     e.preventDefault();
-    openFilePicker();
+    openFilePicker('single');
+  });
+
+  document.getElementById('btn-open-multi')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    openFilePicker('multi');
+  });
+
+  document.getElementById('btn-add-model')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    openFilePicker('add');
   });
 
   emptyState?.querySelectorAll('.empty-open-trigger').forEach((el) => {
@@ -614,7 +717,10 @@ function setupUI() {
   dropZone.addEventListener('drop', (e) => {
     e.preventDefault();
     dropZone.classList.remove('drag-over');
-    if (e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]);
+    const files = e.dataTransfer.files;
+    if (!files?.length) return;
+    if (files.length > 1) loadFiles(files);
+    else loadFile(files[0]);
   });
 
   document.getElementById('toggle-grid').addEventListener('change', (e) => {
@@ -777,15 +883,40 @@ async function loadFile(file, options = {}) {
     loadQualitySelect?.value || 'auto',
   );
 
-  showLoading(t('loadingFileNamed', { name: file.name }), {
+  const isAppend = !!options.append;
+  const loadingLabel = options.multiBatch && options.batchTotal > 1
+    ? t('loadingFileBatch', { index: options.batchIndex, total: options.batchTotal, name: file.name })
+    : t('loadingFileNamed', { name: file.name });
+
+  showLoading(loadingLabel, {
     filename: file.name,
     stage: 'parse',
     cancellable: true,
   });
-  if (!options.fromTab) {
+
+  const entryGroup = new THREE.Group();
+  currentLoadGroup = entryGroup;
+
+  if (!options.fromTab && !isAppend) {
     modelTabsMgr?.stashCurrent();
+    multiModelMgr?.clear();
+    clearModel();
+  } else if (isAppend && multiModelMgr?.isEmpty() && modelGroup.children.length > 0 && currentFile) {
+    const wrap = new THREE.Group();
+    wrap.userData.is2d = modelGroup.userData.is2d;
+    wrap.userData.cadFrameBox = modelGroup.userData.cadFrameBox || null;
+    wrap.userData.cadSource = modelGroup.userData.cadSource || null;
+    while (modelGroup.children.length > 0) {
+      wrap.add(modelGroup.children[0]);
+    }
+    multiModelMgr.addEntry(wrap, {
+      name: currentFile.name,
+      ext: currentFile.ext,
+      buffer: currentFile.buffer,
+      is2d: !!modelGroup.userData.is2d,
+    });
+    modelTabsMgr?.clearAll();
   }
-  clearModel();
 
   try {
     throwIfCancelled(getLoadSignal());
@@ -802,52 +933,96 @@ async function loadFile(file, options = {}) {
       onProgress: (current, total, phase) => updateLoadProgress(current, total, phase),
     };
 
-    modelGroup.userData.is2d = false;
+    entryGroup.userData.is2d = false;
     if (CAD2D_EXTENSIONS.has(ext)) {
-      setViewMode('2d');
+      if (!isAppend) setViewMode('2d');
       await loadCAD2D(uint8, ext, loadOpts);
     } else if (CAD_EXTENSIONS.has(ext)) {
-      setViewMode('3d');
+      if (!isAppend) setViewMode('3d');
       await loadCAD(uint8, ext, loadOpts);
     } else if (ext === '3dm') {
-      setViewMode('3d');
+      if (!isAppend) setViewMode('3d');
       await loadRhino3dmFile(uint8, loadOpts);
     } else {
-      setViewMode('3d');
+      if (!isAppend) setViewMode('3d');
       await loadMesh(uint8, ext, file.name, loadOpts);
     }
 
-    applyLargeModelHints(modelGroup, strategy);
+    applyLargeModelHints(entryGroup, strategy);
     if (strategy.fastPreview) {
       showToast(t('largeFileFastMode'), 'info');
     }
 
-    if (modelGroup.children.length === 0) {
+    if (entryGroup.children.length === 0) {
       throw new Error(t('noModelData'));
     }
 
-    currentFile = { name: file.name, ext, buffer };
+    currentLoadGroup = null;
     const is2d = CAD2D_EXTENSIONS.has(ext);
-    btnSaveAs.disabled = false;
-    btnExport.disabled = is2d;
-    btnDrawing.disabled = is2d;
+    const fileMeta = {
+      name: options.originalName || file.name,
+      ext,
+      buffer,
+      is2d,
+    };
 
-    fileNameEl.textContent = options.originalName || file.name;
-    fileFormatEl.textContent = options.converted && options.originalExt
-      ? t('convertedFromFormat', { format: 'STEP', ext: options.originalExt })
-      : SUPPORTED_FORMATS[ext];
-    fileInfo.classList.remove('hidden');
-    emptyState.classList.add('hidden');
+    if (isAppend || (options.multiBatch && options.batchTotal > 1)) {
+      multiModelMgr?.addEntry(entryGroup, fileMeta);
+      modelGroup.userData.is2d = is2d;
+      updatePixelBackground(ext);
+    } else {
+      modelGroup.userData.is2d = entryGroup.userData.is2d;
+      modelGroup.userData.cadFrameBox = entryGroup.userData.cadFrameBox || null;
+      modelGroup.userData.cadSource = entryGroup.userData.cadSource || null;
+      while (entryGroup.children.length > 0) {
+        modelGroup.add(entryGroup.children[0]);
+      }
+      currentFile = { name: fileMeta.name, ext, buffer };
+      btnSaveAs.disabled = false;
+      btnExport.disabled = is2d;
+      btnDrawing.disabled = is2d;
+      fileNameEl.textContent = fileMeta.name;
+      fileFormatEl.textContent = options.converted && options.originalExt
+        ? t('convertedFromFormat', { format: 'STEP', ext: options.originalExt })
+        : SUPPORTED_FORMATS[ext];
+      fileInfo.classList.remove('hidden');
+      emptyState.classList.add('hidden');
+      modelTabsMgr?.registerLoaded();
+      viewerFeatures?.onModelLoaded();
+      partTreeMgr?.refresh(is2d ? 'layers' : 'parts');
+      fitToView();
+    }
 
-    fitToView();
     updateStats();
     saveRecentFile(file.name, ext, buffer);
     recentFilesMgr?.refresh();
-    modelTabsMgr?.registerLoaded();
-    viewerFeatures?.onModelLoaded();
-    partTreeMgr?.refresh(CAD2D_EXTENSIONS.has(ext) ? 'layers' : 'parts');
+    document.getElementById('btn-add-model')?.classList.toggle('hidden', modelGroup.children.length === 0);
   } catch (err) {
+    currentLoadGroup = null;
     if (isLoadCancelled(err)) {
+      if (entryGroup.children.length > 0) {
+        entryGroup.traverse((obj) => {
+          if (obj.geometry) obj.geometry.dispose();
+          if (obj.material) {
+            const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+            mats.forEach((m) => m.dispose());
+          }
+        });
+      }
+      if (!isAppend) clearModel();
+      setViewMode('3d');
+      currentFile = null;
+      btnSaveAs.disabled = true;
+      btnExport.disabled = true;
+      btnDrawing.disabled = true;
+      fileInfo.classList.add('hidden');
+      emptyState.classList.remove('hidden');
+      document.getElementById('btn-add-model')?.classList.add('hidden');
+      showToast(t('loadingCancelled'), 'info');
+      return;
+    }
+    console.error(err);
+    if (!isAppend) {
       clearModel();
       setViewMode('3d');
       currentFile = null;
@@ -856,20 +1031,10 @@ async function loadFile(file, options = {}) {
       btnDrawing.disabled = true;
       fileInfo.classList.add('hidden');
       emptyState.classList.remove('hidden');
-      showToast(t('loadingCancelled'), 'info');
-      return;
     }
-    console.error(err);
-    clearModel();
-    setViewMode('3d');
-    currentFile = null;
-    btnSaveAs.disabled = true;
-    btnExport.disabled = true;
-    btnDrawing.disabled = true;
-    fileInfo.classList.add('hidden');
-    emptyState.classList.remove('hidden');
     showAlert(t('loadFailed'), err.message || t('unknownError'));
   } finally {
+    currentLoadGroup = null;
     hideLoading();
   }
 }
@@ -895,7 +1060,7 @@ async function loadRhino3dmFile(buffer, { signal, onProgress } = {}) {
       tagPart(child, child.name || `Part ${partIdx + 1}`, partIdx++);
     }
   });
-  modelGroup.add(obj);
+  getLoadGroup().add(obj);
 }
 
 async function loadCAD2D(buffer, ext, { strategy, onProgress, signal } = {}) {
@@ -942,11 +1107,12 @@ async function loadCAD2D(buffer, ext, { strategy, onProgress, signal } = {}) {
     console.error(e);
     throw e;
   }
-  modelGroup.add(cadGroup);
-  modelGroup.userData.is2d = true;
-  modelGroup.userData.cadFrameBox = cadGroup.userData.cadFrameBox || null;
-  modelGroup.userData.cadSource = ext;
-  updatePixelBackground(ext);
+  const target = getLoadGroup();
+  target.add(cadGroup);
+  target.userData.is2d = true;
+  target.userData.cadFrameBox = cadGroup.userData.cadFrameBox || null;
+  target.userData.cadSource = ext;
+  if (target === modelGroup) updatePixelBackground(ext);
 }
 
 async function addCadMesh(meshData, index, strategy, onProgress, total) {
@@ -979,7 +1145,7 @@ async function addCadMesh(meshData, index, strategy, onProgress, total) {
   mesh.castShadow = !strategy?.disableShadows;
   mesh.receiveShadow = !strategy?.disableShadows;
   tagPart(mesh, meshData.name, index);
-  modelGroup.add(mesh);
+  getLoadGroup().add(mesh);
   onProgress?.(index + 1, total, 'meshes');
 }
 
@@ -1071,7 +1237,7 @@ async function loadMesh(buffer, ext, filename, { strategy, onProgress, signal } 
       const mesh = new THREE.Mesh(geometry, material);
       mesh.castShadow = !strategy?.disableShadows;
       tagPart(mesh, parts.length > 1 ? part.name : stem, i);
-      modelGroup.add(mesh);
+      getLoadGroup().add(mesh);
       if (strategy?.progressive) await yieldToMain(signal);
     }
     return;
@@ -1099,7 +1265,7 @@ async function loadMesh(buffer, ext, filename, { strategy, onProgress, signal } 
       tagPart(child, child.name, partIdx++);
       if (strategy?.progressive) await yieldToMain(signal);
     }
-    modelGroup.add(obj);
+    getLoadGroup().add(obj);
     return;
   }
 
@@ -1115,7 +1281,7 @@ async function loadMesh(buffer, ext, filename, { strategy, onProgress, signal } 
     const mesh = new THREE.Mesh(geometry, defaultMaterial.clone());
     mesh.castShadow = !strategy?.disableShadows;
     tagPart(mesh, filename.replace(/\.[^.]+$/, ''), 0);
-    modelGroup.add(mesh);
+    getLoadGroup().add(mesh);
     return;
   }
 
@@ -1134,7 +1300,7 @@ async function loadMesh(buffer, ext, filename, { strategy, onProgress, signal } 
           tagPart(child, child.name, partIdx++);
         }
       });
-      modelGroup.add(gltf.scene);
+      getLoadGroup().add(gltf.scene);
     } catch {
       throw new Error(t('gltfInvalid'));
     } finally {
@@ -1148,6 +1314,7 @@ async function loadMesh(buffer, ext, filename, { strategy, onProgress, signal } 
 
 // ── View helpers ──
 function clearModel({ dispose = true } = {}) {
+  multiModelMgr?.clear();
   while (modelGroup.children.length > 0) {
     const child = modelGroup.children[0];
     modelGroup.remove(child);
@@ -1170,6 +1337,7 @@ function clearModel({ dispose = true } = {}) {
   updatePixelBackground(null);
   viewerFeatures?.onModelCleared();
   partTreeMgr?.clear();
+  document.getElementById('btn-add-model')?.classList.add('hidden');
 }
 
 function fitToView() {
@@ -1603,7 +1771,7 @@ function showToast(message, type = 'success') {
 
 function hasExportableModel() {
   let found = false;
-  modelGroup.traverse((child) => {
+  getModelTarget().traverse((child) => {
     if (child.isMesh && child.geometry?.attributes?.position?.count > 0) {
       found = true;
     }
@@ -1631,15 +1799,15 @@ async function exportToFormat(format) {
 
   switch (format) {
     case 'stl': {
-      const data = new STLExporter().parse(modelGroup, { binary: true });
+      const data = new STLExporter().parse(getModelTarget(), { binary: true });
       return new Blob([data], { type: MIME_TYPES.stl });
     }
     case 'obj': {
-      const text = new OBJExporter().parse(modelGroup);
+      const text = new OBJExporter().parse(getModelTarget());
       return new Blob([text], { type: MIME_TYPES.obj });
     }
     case 'ply': {
-      const data = new PLYExporter().parse(modelGroup);
+      const data = new PLYExporter().parse(getModelTarget());
       return new Blob([data], { type: MIME_TYPES.ply });
     }
     case 'glb':
@@ -1647,7 +1815,7 @@ async function exportToFormat(format) {
       const binary = format === 'glb';
       const result = await new Promise((resolve, reject) => {
         new GLTFExporter().parse(
-          modelGroup,
+          getModelTarget(),
           resolve,
           reject,
           { binary }
@@ -1761,7 +1929,7 @@ async function confirmDrawingExport() {
   showLoading(t('generatingDrawing'), { stage: 'drawing', cancellable: true });
   try {
     throwIfCancelled(getLoadSignal());
-    const dxfText = generateThreeViewDXF(modelGroup, {
+    const dxfText = generateThreeViewDXF(getModelTarget(), {
       includeDimensions: drawingDimensions?.checked ?? true,
       scale: drawingScale?.value ?? 'auto',
       layout: drawingLayout?.value ?? 'third-angle',
