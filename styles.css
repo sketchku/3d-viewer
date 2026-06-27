@@ -1459,3 +1459,35 @@ body.is-loading {
     border-bottom: 1px solid var(--border);
   }
 }
+
+/* RTL (Arabic) */
+[dir="rtl"] #app {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .sidebar {
+  border-right: none;
+  border-left: 1px solid var(--border);
+}
+
+[dir="rtl"] .drawing-view-tag.top,
+[dir="rtl"] .drawing-view-tag.front,
+[dir="rtl"] .drawing-view-tag.side {
+  border-left: none;
+  border-right: 3px solid;
+}
+
+[dir="rtl"] .drawing-view-tag.top { border-right-color: #34d399; }
+[dir="rtl"] .drawing-view-tag.front { border-right-color: #f87171; }
+[dir="rtl"] .drawing-view-tag.side { border-right-color: #60a5fa; }
+
+@media (max-width: 700px) {
+  [dir="rtl"] #app {
+    flex-direction: column;
+  }
+
+  [dir="rtl"] .sidebar {
+    border-left: none;
+    border-bottom: 1px solid var(--border);
+  }
+}

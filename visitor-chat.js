@@ -8,8 +8,17 @@ function createId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
+const CHAT_LOCALES = {
+  ko: 'ko-KR',
+  en: 'en-US',
+  zh: 'zh-CN',
+  es: 'es-ES',
+  ar: 'ar-SA',
+  hi: 'hi-IN',
+};
+
 function formatTime(ts, lang) {
-  const locale = lang === 'en' ? 'en-US' : 'ko-KR';
+  const locale = CHAT_LOCALES[lang] || 'en-US';
   return new Date(ts).toLocaleString(locale, {
     month: '2-digit',
     day: '2-digit',

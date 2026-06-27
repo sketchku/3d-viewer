@@ -10,7 +10,7 @@ import { PLYExporter } from 'three/addons/exporters/PLYExporter.js';
 import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
 import { SimplifyModifier } from 'three/addons/modifiers/SimplifyModifier.js';
 import { generateThreeViewDXF } from './drawing-export.js?v=2.4.1';
-import { t, getLanguage } from './i18n.js?v=2.6.8';
+import { t, getLanguage } from './i18n.js?v=2.6.9';
 import { initVisitorChat } from './visitor-chat.js?v=2.5.6';
 import { initViewerFeatures } from './viewer-features.js?v=2.4.1';
 import { initRecentFiles, saveRecentFile } from './recent-files.js?v=2.4.1';
@@ -43,7 +43,7 @@ import { initColorPicker } from './color-picker.js?v=2.6.7';
 let cad2dModule = null;
 async function getCad2dModule() {
   if (!cad2dModule) {
-    cad2dModule = await import('./cad2d-loader.js?v=2.6.8');
+    cad2dModule = await import('./cad2d-loader.js?v=2.6.9');
   }
   return cad2dModule;
 }

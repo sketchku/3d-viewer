@@ -1,6 +1,13 @@
 /** Client-side chat translation (Google Translate gtx, auto-detect source). */
 
-const TARGET_CODES = { ko: 'ko', en: 'en' };
+const TARGET_CODES = {
+  ko: 'ko',
+  en: 'en',
+  zh: 'zh-CN',
+  es: 'es',
+  ar: 'ar',
+  hi: 'hi',
+};
 const cache = new Map();
 
 function normalizeLang(code) {
@@ -8,6 +15,10 @@ function normalizeLang(code) {
   const c = String(code).toLowerCase();
   if (c === 'ko' || c.startsWith('ko')) return 'ko';
   if (c === 'en' || c.startsWith('en')) return 'en';
+  if (c === 'zh' || c.startsWith('zh')) return 'zh';
+  if (c === 'es' || c.startsWith('es')) return 'es';
+  if (c === 'ar' || c.startsWith('ar')) return 'ar';
+  if (c === 'hi' || c.startsWith('hi')) return 'hi';
   return c.split('-')[0];
 }
 
