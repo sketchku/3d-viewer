@@ -1,4 +1,5 @@
 import { SVGLoader } from 'three/addons/loaders/SVGLoader.js';
+import { aiToSvg } from './ai-loader.js';
 import { t } from './i18n.js';
 import { throwIfCancelled, yieldToMain } from './large-file-loader.js';
 
@@ -912,6 +913,38 @@ export async function loadDwg(buffer, THREE, { signal, onProgress, bgColor, line
   return group;
 }
 
+export async function loadAi(buffer, THREE, { signal, onProgress, bgColor, lineColor } = {}) {
+  const report = (current, total) => onProgress?.(current, total);
+
+  throwIfCancelled(signal);
+  await ensureCadFonts();
+  report(0, 3);
+  await yieldToMain(signal);
+
+  let svg;
+  try {
+    svg = await aiToSvg(buffer, {
+      signal,
+      onProgress: (page, total) => report(1 + Math.floor((page / total) * 1), 3),
+    });
+  } catch (e) {
+    if (e?.message === t('aiParseFailed')) throw e;
+    throw new Error(t('aiParseFailed'));
+  }
+  throwIfCancelled(signal);
+  report(2, 3);
+
+  const group = svgToGroup(svg, THREE, { bgColor, lineColor, partitionGroups: true });
+  group.userData.is2d = true;
+  if (group.children.length === 0) {
+    throw new Error(t('aiNoShapes'));
+  }
+  group.userData.cadSource = 'ai';
+  normalizeCadFrontView(group, THREE);
+  report(3, 3);
+  return group;
+}
+
 function collectSvgTextContent(node) {
   let text = '';
   for (const child of node.childNodes) {
@@ -1065,6 +1098,25 @@ function addSvgTextElement(el, doc, THREE, layerGroup, displayOptions = {}) {
   layerGroup.add(sprite);
 }
 
+function addSvgImageElement(el, doc, THREE, layerGroup) {
+  const href = el.getAttribute('href') || el.getAttributeNS('http://www.w3.org/1999/xlink', 'href');
+  if (!href) return;
+  const x = parseFloat(el.getAttribute('x') || '0');
+  const y = parseFloat(el.getAttribute('y') || '0');
+  const w = parseFloat(el.getAttribute('width') || '0');
+  const h = parseFloat(el.getAttribute('height') || '0');
+  if (w <= 0 || h <= 0) return;
+
+  const layerName = layerGroup.userData?.layerName || layerGroup.name || '0';
+  const texture = new THREE.TextureLoader().load(href);
+  if (THREE.SRGBColorSpace) texture.colorSpace = THREE.SRGBColorSpace;
+  const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, side: THREE.DoubleSide });
+  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(w, h), material);
+  mesh.position.set(x + w / 2, -(y + h / 2), 0);
+  mesh.userData.layerName = layerName;
+  layerGroup.add(mesh);
+}
+
 function svgToGroup(svgString, THREE, displayOptions = {}) {
   const doc = new DOMParser().parseFromString(svgString, 'image/svg+xml');
   const loader = new SVGLoader();
@@ -1100,6 +1152,12 @@ function svgToGroup(svgString, THREE, displayOptions = {}) {
     const layerName = resolveSvgPartitionName(el, doc, partitionGroups);
     const layerGroup = ensureSvgLayerGroup(layerMap, THREE, layerName);
     addSvgTextElement(el, doc, THREE, layerGroup, displayOptions);
+  }
+
+  for (const el of doc.querySelectorAll('image')) {
+    const layerName = resolveSvgPartitionName(el, doc, partitionGroups);
+    const layerGroup = ensureSvgLayerGroup(layerMap, THREE, layerName);
+    addSvgImageElement(el, doc, THREE, layerGroup);
   }
 
   const group = new THREE.Group();

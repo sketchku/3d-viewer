@@ -10,7 +10,7 @@ import { PLYExporter } from 'three/addons/exporters/PLYExporter.js';
 import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
 import { SimplifyModifier } from 'three/addons/modifiers/SimplifyModifier.js';
 import { generateThreeViewDXF } from './drawing-export.js?v=2.4.1';
-import { t, getLanguage } from './i18n.js?v=2.6.7';
+import { t, getLanguage } from './i18n.js?v=2.6.8';
 import { initVisitorChat } from './visitor-chat.js?v=2.5.6';
 import { initViewerFeatures } from './viewer-features.js?v=2.4.1';
 import { initRecentFiles, saveRecentFile } from './recent-files.js?v=2.4.1';
@@ -43,7 +43,7 @@ import { initColorPicker } from './color-picker.js?v=2.6.7';
 let cad2dModule = null;
 async function getCad2dModule() {
   if (!cad2dModule) {
-    cad2dModule = await import('./cad2d-loader.js?v=2.6.6');
+    cad2dModule = await import('./cad2d-loader.js?v=2.6.8');
   }
   return cad2dModule;
 }
@@ -62,6 +62,7 @@ const SUPPORTED_FORMATS = {
   '3dm': 'Rhino 3DM',
   dxf: 'DXF',
   dwg: 'DWG',
+  ai: 'Adobe Illustrator',
   sldprt: 'SolidWorks', sldasm: 'SolidWorks', slddrw: 'SolidWorks',
   ipt: 'Inventor', iam: 'Inventor', ipn: 'Inventor',
   f3d: 'Fusion 360', f3z: 'Fusion 360',
@@ -79,7 +80,7 @@ const EXPORT_GUIDE_KEYS = {
 };
 
 const CAD_EXTENSIONS = new Set(['stp', 'step', 'iges', 'igs', 'brep', 'brp']);
-const CAD2D_EXTENSIONS = new Set(['dxf', 'dwg']);
+const CAD2D_EXTENSIONS = new Set(['dxf', 'dwg', 'ai']);
 
 // ── DOM refs ──
 const canvas = document.getElementById('canvas');
@@ -159,6 +160,7 @@ const MIME_TYPES = {
   brp: 'application/octet-stream',
   dxf: 'application/dxf',
   dwg: 'application/acad',
+  ai: 'application/illustrator',
 };
 
 // ── Three.js setup ──
@@ -918,6 +920,12 @@ async function loadCAD2D(buffer, ext, { strategy, onProgress, signal } = {}) {
         progressive: strategy?.progressive,
         dxfBatchSize: strategy?.dxfBatchSize,
         yieldFn: () => yieldToMain(signal),
+        signal,
+        onProgress: (current, total) => onProgress?.(current, total, 'entities'),
+        ...cadColorOpts,
+      });
+    } else if (ext === 'ai') {
+      cadGroup = await cad2d.loadAi(buffer, THREE, {
         signal,
         onProgress: (current, total) => onProgress?.(current, total, 'entities'),
         ...cadColorOpts,

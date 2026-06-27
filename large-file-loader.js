@@ -77,7 +77,7 @@ function bumpTier(tier) {
 export function resolveLoadStrategy(fileSize, ext, qualityMode = LOAD_QUALITY.AUTO) {
   const isCad = ['stp', 'step', 'iges', 'igs', 'brep', 'brp'].includes(ext);
   const isMesh = ['stl', 'stla', 'stlb', 'stl.gz', 'obj', 'ply'].includes(ext);
-  const is2d = ['dxf', 'dwg'].includes(ext);
+  const is2d = ['dxf', 'dwg', 'ai'].includes(ext);
 
   let tier = sizeTier(fileSize);
   if (qualityMode === LOAD_QUALITY.FAST) tier = bumpTier(tier);
