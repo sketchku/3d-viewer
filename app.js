@@ -10,7 +10,7 @@ import { PLYExporter } from 'three/addons/exporters/PLYExporter.js';
 import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
 import { SimplifyModifier } from 'three/addons/modifiers/SimplifyModifier.js';
 import { generateThreeViewDXF } from './drawing-export.js?v=2.4.1';
-import { t, getLanguage } from './i18n.js?v=2.6.10';
+import { t, getLanguage } from './i18n.js?v=2.6.13';
 import { initVisitorChat } from './visitor-chat.js?v=2.5.6';
 import { initViewerFeatures } from './viewer-features.js?v=2.6.12';
 import { initRecentFiles, saveRecentFile } from './recent-files.js?v=2.4.1';
@@ -26,7 +26,7 @@ import {
   createIndexAttribute,
   throwIfCancelled,
   isLoadCancelled,
-} from './large-file-loader.js?v=2.4.1';
+} from './large-file-loader.js?v=2.6.13';
 import {
   isProprietaryCad,
   getProprietaryCadInfo,
@@ -58,6 +58,7 @@ const SUPPORTED_FORMATS = {
   'stl.gz': 'STL (GZIP)',
   obj: 'OBJ',
   ply: 'PLY',
+  '3mf': '3MF',
   glb: 'GLB', gltf: 'GLTF',
   iges: 'IGES', igs: 'IGES',
   brep: 'BREP', brp: 'BREP',
@@ -1311,6 +1312,39 @@ async function loadMesh(buffer, ext, filename, { strategy, onProgress, signal } 
     mesh.castShadow = !strategy?.disableShadows;
     tagPart(mesh, filename.replace(/\.[^.]+$/, ''), 0);
     getLoadGroup().add(mesh);
+    return;
+  }
+
+  if (ext === '3mf') {
+    const { ThreeMFLoader } = await import('three/addons/loaders/3MFLoader.js');
+    let group;
+    try {
+      group = new ThreeMFLoader().parse(buffer);
+    } catch {
+      throw new Error(t('threeMfInvalid'));
+    }
+    if (!group) throw new Error(t('threeMfInvalid'));
+
+    const meshes = [];
+    group.traverse((child) => { if (child.isMesh) meshes.push(child); });
+    if (meshes.length === 0) throw new Error(t('threeMfNoMeshes'));
+
+    let partIdx = 0;
+    for (const child of meshes) {
+      throwIfCancelled(signal);
+      if (child.geometry) {
+        child.geometry = await finalizeMeshGeometry(child.geometry, strategy, onProgress, signal);
+      }
+      if (!child.material) child.material = defaultMaterial.clone();
+      child.castShadow = !strategy?.disableShadows;
+      child.receiveShadow = !strategy?.disableShadows;
+      const partName = child.name
+        || child.parent?.name
+        || filename.replace(/\.[^.]+$/, '');
+      tagPart(child, partName, partIdx++);
+      if (strategy?.progressive) await yieldToMain(signal);
+    }
+    getLoadGroup().add(group);
     return;
   }
 

@@ -42,7 +42,7 @@ git push -u origin main
 
 ### 웹 버전에서 지원하는 형식
 
-- STEP/STP, IGES, BREP, STL, OBJ, PLY, GLB/GLTF, 3DM, DXF, DWG
+- STEP/STP, IGES, BREP, STL, 3MF (3D printing), OBJ, PLY, GLB/GLTF, 3DM, DXF, DWG, AI
 - STL/OBJ/PLY/GLB로보내기, 3면도 DXF 생성
 
 ### 웹 버전에서 지원하지 않는 기능
