@@ -10,7 +10,7 @@ import { PLYExporter } from 'three/addons/exporters/PLYExporter.js';
 import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
 import { SimplifyModifier } from 'three/addons/modifiers/SimplifyModifier.js';
 import { generateThreeViewDXF } from './drawing-export.js?v=2.4.1';
-import { t, getLanguage } from './i18n.js?v=2.6.13';
+import { t, getLanguage } from './i18n.js?v=2.6.14';
 import { initVisitorChat } from './visitor-chat.js?v=2.5.6';
 import { initViewerFeatures } from './viewer-features.js?v=2.6.12';
 import { initRecentFiles, saveRecentFile } from './recent-files.js?v=2.4.1';
@@ -20,13 +20,14 @@ import { initEditTools } from './edit-tools.js?v=2.6.12';
 import { initPartTree, tagPart } from './part-tree.js?v=2.6.7';
 import {
   resolveLoadStrategy,
+  readFileWithProgress,
   yieldToMain,
   simplifyGeometryIfNeeded,
   applyLargeModelHints,
   createIndexAttribute,
   throwIfCancelled,
   isLoadCancelled,
-} from './large-file-loader.js?v=2.6.13';
+} from './large-file-loader.js?v=2.6.14';
 import {
   isProprietaryCad,
   getProprietaryCadInfo,
@@ -919,7 +920,7 @@ async function loadFile(file, options = {}) {
 
   showLoading(loadingLabel, {
     filename: file.name,
-    stage: 'parse',
+    stage: strategy.streamRead ? 'read' : 'parse',
     cancellable: true,
   });
 
@@ -949,7 +950,11 @@ async function loadFile(file, options = {}) {
 
   try {
     throwIfCancelled(getLoadSignal());
-    const buffer = await file.arrayBuffer();
+    const buffer = strategy.streamRead
+      ? await readFileWithProgress(file, getLoadSignal(), (current, total, phase) => {
+        updateLoadProgress(current, total, phase);
+      })
+      : await file.arrayBuffer();
     throwIfCancelled(getLoadSignal());
     if (buffer.byteLength === 0) {
       throw new Error(t('fileEmptyContent'));
@@ -1233,7 +1238,7 @@ async function loadCAD(buffer, ext, { strategy, onProgress, signal } = {}) {
 
 async function finalizeMeshGeometry(geometry, strategy, onProgress, signal) {
   throwIfCancelled(signal);
-  if (!geometry.attributes.normal) {
+  if (!geometry.attributes.normal && !strategy?.fastPreview) {
     geometry.computeVertexNormals();
   }
   if (!Number.isFinite(strategy?.maxTriangles)) return geometry;
@@ -1241,13 +1246,52 @@ async function finalizeMeshGeometry(geometry, strategy, onProgress, signal) {
   return simplifyGeometryIfNeeded(THREE, SimplifyModifier, geometry, strategy.maxTriangles, signal);
 }
 
+async function addMeshPart(geometry, name, index, strategy, onProgress, signal, { earlyFit } = {}) {
+  geometry = await finalizeMeshGeometry(geometry, strategy, onProgress, signal);
+  throwIfCancelled(signal);
+  const material = defaultMaterial.clone();
+  if (geometry.attributes.color) material.vertexColors = true;
+  const mesh = new THREE.Mesh(geometry, material);
+  mesh.castShadow = !strategy?.disableShadows;
+  mesh.receiveShadow = !strategy?.disableShadows;
+  tagPart(mesh, name, index);
+  getLoadGroup().add(mesh);
+  if (earlyFit?.enabled && !earlyFit.done) {
+    fitToView();
+    earlyFit.done = true;
+  }
+  if (strategy?.progressive) await yieldToMain(signal);
+}
+
 async function loadMesh(buffer, ext, filename, { strategy, onProgress, signal } = {}) {
   throwIfCancelled(signal);
-  const { isStlExtension, loadStl } = await import('./stl-loader.js?v=2.5.1');
+  const { isStlExtension, loadStl } = await import('./stl-loader.js?v=2.6.14');
   if (isStlExtension(ext)) {
+    const stem = filename.replace(/\.(stl\.gz|stla|stlb|stl)$/i, '');
+    const earlyFit = { enabled: !!strategy?.progressive, done: false };
+    let partIdx = 0;
+    let streamedViaBatch = false;
     let parts;
+
+    const stlOpts = {
+      ext,
+      signal,
+      onProgress,
+      progressive: strategy?.progressive,
+      fastPreview: strategy?.fastPreview,
+      maxTriangles: strategy?.maxTriangles,
+      meshBatchSize: Math.max(10_000, (strategy?.meshBatchSize || 6) * 8000),
+      onBatch: strategy?.progressive
+        ? async (part) => {
+          streamedViaBatch = true;
+          const name = part.name && part.name !== 'STL' ? part.name : stem;
+          await addMeshPart(part.geometry, name, partIdx++, strategy, onProgress, signal, { earlyFit });
+        }
+        : undefined,
+    };
+
     try {
-      parts = await loadStl(buffer, THREE, { ext, signal, onProgress });
+      parts = await loadStl(buffer, THREE, stlOpts);
     } catch (err) {
       if (err?.message === 'GZIP_STL_UNSUPPORTED') throw new Error(t('stlGzipUnsupported'));
       if (err?.message === 'STL_PARSE_FAILED') throw new Error(t('stlInvalid'));
@@ -1255,20 +1299,13 @@ async function loadMesh(buffer, ext, filename, { strategy, onProgress, signal } 
       throw err;
     }
 
-    const stem = filename.replace(/\.(stl\.gz|stla|stlb|stl)$/i, '');
-    for (let i = 0; i < parts.length; i++) {
-      throwIfCancelled(signal);
-      const part = parts[i];
-      let geometry = part.geometry;
-      geometry = await finalizeMeshGeometry(geometry, strategy, onProgress, signal);
-      throwIfCancelled(signal);
-      const material = defaultMaterial.clone();
-      if (geometry.attributes.color) material.vertexColors = true;
-      const mesh = new THREE.Mesh(geometry, material);
-      mesh.castShadow = !strategy?.disableShadows;
-      tagPart(mesh, parts.length > 1 ? part.name : stem, i);
-      getLoadGroup().add(mesh);
-      if (strategy?.progressive) await yieldToMain(signal);
+    if (!streamedViaBatch) {
+      for (let i = 0; i < parts.length; i++) {
+        throwIfCancelled(signal);
+        const part = parts[i];
+        const name = parts.length > 1 ? part.name : stem;
+        await addMeshPart(part.geometry, name, i, strategy, onProgress, signal, { earlyFit });
+      }
     }
     return;
   }
@@ -1353,16 +1390,22 @@ async function loadMesh(buffer, ext, filename, { strategy, onProgress, signal } 
     const url = URL.createObjectURL(blob);
     try {
       throwIfCancelled(signal);
+      onProgress?.(0, 1, 'parse');
       const gltf = await new GLTFLoader().loadAsync(url);
       throwIfCancelled(signal);
+      const meshes = [];
+      gltf.scene.traverse((child) => { if (child.isMesh) meshes.push(child); });
       let partIdx = 0;
-      gltf.scene.traverse((child) => {
-        if (child.isMesh) {
-          child.castShadow = !strategy?.disableShadows;
-          child.receiveShadow = !strategy?.disableShadows;
-          tagPart(child, child.name, partIdx++);
+      for (const child of meshes) {
+        throwIfCancelled(signal);
+        if (child.geometry) {
+          child.geometry = await finalizeMeshGeometry(child.geometry, strategy, onProgress, signal);
         }
-      });
+        child.castShadow = !strategy?.disableShadows;
+        child.receiveShadow = !strategy?.disableShadows;
+        tagPart(child, child.name || filename.replace(/\.[^.]+$/, ''), partIdx++);
+        if (strategy?.progressive) await yieldToMain(signal);
+      }
       getLoadGroup().add(gltf.scene);
     } catch {
       throw new Error(t('gltfInvalid'));
@@ -1502,6 +1545,7 @@ function updateStats() {
 }
 
 const LOADING_STAGE_KEYS = {
+  read: 'loadingStageRead',
   parse: 'loadingStageParse',
   meshes: 'loadingStageMeshes',
   entities: 'loadingStageEntities',
@@ -1537,7 +1581,12 @@ function updateLoadProgress(current, total, phase) {
   const ratio = total > 0 ? current / total : 0;
   setLoadingProgress(ratio, false);
   setLoadingStage(phase);
-  if (phase === 'meshes') {
+  if (phase === 'read') {
+    loadingText.textContent = t('loadingRead', {
+      current: (current / 1024 / 1024).toFixed(1),
+      total: (total / 1024 / 1024).toFixed(1),
+    });
+  } else if (phase === 'meshes') {
     loadingText.textContent = t('loadingMeshes', { current, total });
   } else if (phase === 'entities') {
     loadingText.textContent = t('loadingEntities', { current, total });

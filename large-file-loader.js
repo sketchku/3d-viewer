@@ -74,9 +74,14 @@ function bumpTier(tier) {
   return 'huge';
 }
 
+export function computeSampleStride(triangleCount, maxTriangles) {
+  if (!Number.isFinite(maxTriangles) || triangleCount <= maxTriangles) return 1;
+  return Math.max(1, Math.ceil(triangleCount / maxTriangles));
+}
+
 export function resolveLoadStrategy(fileSize, ext, qualityMode = LOAD_QUALITY.AUTO) {
   const isCad = ['stp', 'step', 'iges', 'igs', 'brep', 'brp'].includes(ext);
-  const isMesh = ['stl', 'stla', 'stlb', 'stl.gz', 'obj', 'ply', '3mf'].includes(ext);
+  const isMesh = ['stl', 'stla', 'stlb', 'stl.gz', 'obj', 'ply', '3mf', 'glb', 'gltf'].includes(ext);
   const is2d = ['dxf', 'dwg', 'ai'].includes(ext);
 
   let tier = sizeTier(fileSize);
@@ -100,7 +105,45 @@ export function resolveLoadStrategy(fileSize, ext, qualityMode = LOAD_QUALITY.AU
     meshBatchSize: BATCH_SIZE[tier],
     dxfBatchSize: DXF_BATCH[tier],
     fastPreview: tier !== 'small',
+    streamRead: fileSize > 4 * MB,
   };
+}
+
+/** Stream-read large files with progress and UI yields. */
+export async function readFileWithProgress(file, signal, onProgress) {
+  throwIfCancelled(signal);
+  const total = file.size;
+  onProgress?.(0, total, 'read');
+
+  if (total <= 4 * MB || typeof file.stream !== 'function') {
+    const buf = await file.arrayBuffer();
+    throwIfCancelled(signal);
+    onProgress?.(total, total, 'read');
+    return buf;
+  }
+
+  const reader = file.stream().getReader();
+  const chunks = [];
+  let received = 0;
+
+  while (true) {
+    throwIfCancelled(signal);
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+    received += value.byteLength;
+    onProgress?.(received, total, 'read');
+    if (received % (2 * MB) < value.byteLength) await yieldToMain(signal);
+  }
+
+  const merged = new Uint8Array(received);
+  let pos = 0;
+  for (const chunk of chunks) {
+    merged.set(chunk, pos);
+    pos += chunk.byteLength;
+  }
+  throwIfCancelled(signal);
+  return merged.buffer;
 }
 
 export function countTriangles(geometry) {

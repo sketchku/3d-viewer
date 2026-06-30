@@ -3,7 +3,11 @@
  */
 
 import { STLLoader } from 'three/addons/loaders/STLLoader.js';
-import { throwIfCancelled, yieldToMain } from './large-file-loader.js?v=2.5.1';
+import {
+  throwIfCancelled,
+  yieldToMain,
+  computeSampleStride,
+} from './large-file-loader.js?v=2.6.14';
 
 const STL_EXTENSIONS = new Set(['stl', 'stla', 'stlb', 'stl.gz']);
 
@@ -95,15 +99,28 @@ function materialiseColor(attr) {
   return { r, g, b };
 }
 
-function parseBinaryStl(u8, THREE, offset = 0) {
+function buildBinaryStlGeometry(THREE, positions, colors, hasColor, computeNormals = true) {
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  if (hasColor) {
+    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  }
+  if (computeNormals) geometry.computeVertexNormals();
+  return geometry;
+}
+
+function parseBinaryStl(u8, THREE, offset = 0, { sampleStride = 1, computeNormals = true } = {}) {
   const triCount = readUInt32LE(u8, offset + BINARY_HEADER_SIZE);
+  const stride = Math.max(1, sampleStride | 0);
+  const outCount = Math.ceil(triCount / stride);
   const start = offset + BINARY_HEADER_SIZE + BINARY_COUNT_SIZE;
-  const positions = new Float32Array(triCount * 9);
-  const colors = new Float32Array(triCount * 9);
+  const positions = new Float32Array(outCount * 9);
+  const colors = new Float32Array(outCount * 9);
   let hasColor = false;
   const data = new DataView(u8.buffer, u8.byteOffset, u8.byteLength);
+  let out = 0;
 
-  for (let i = 0; i < triCount; i++) {
+  for (let i = 0; i < triCount; i += stride) {
     const base = start + i * BINARY_TRIANGLE_SIZE;
     if (base + BINARY_TRIANGLE_SIZE > u8.length) break;
 
@@ -112,7 +129,7 @@ function parseBinaryStl(u8, THREE, offset = 0) {
     if (color) hasColor = true;
 
     for (let v = 0; v < 3; v++) {
-      const posBase = (i * 3 + v) * 3;
+      const posBase = (out * 3 + v) * 3;
       const src = base + 12 + v * 12;
       positions[posBase] = data.getFloat32(src, true);
       positions[posBase + 1] = data.getFloat32(src + 4, true);
@@ -123,15 +140,104 @@ function parseBinaryStl(u8, THREE, offset = 0) {
         colors[posBase + 2] = color.b;
       }
     }
+    out++;
   }
 
-  const geometry = new THREE.BufferGeometry();
-  geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-  if (hasColor) {
-    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  const geometry = buildBinaryStlGeometry(THREE, positions, colors, hasColor, computeNormals);
+  const variant = hasColor ? 'binary-color' : 'binary';
+  const note = stride > 1 ? `${variant}+sampled` : variant;
+  return [{ name: 'STL', geometry, variant: note, triangleCount: triCount }];
+}
+
+async function parseBinaryStlProgressive(u8, THREE, {
+  offset = 0,
+  sampleStride = 1,
+  batchSize = 50000,
+  computeNormals = true,
+  signal,
+  onProgress,
+  onBatch,
+} = {}) {
+  const triCount = readUInt32LE(u8, offset + BINARY_HEADER_SIZE);
+  const stride = Math.max(1, sampleStride | 0);
+  const start = offset + BINARY_HEADER_SIZE + BINARY_COUNT_SIZE;
+  const data = new DataView(u8.buffer, u8.byteOffset, u8.byteLength);
+  const batchCap = Math.max(1000, batchSize | 0);
+
+  let batchPositions = [];
+  let batchColors = [];
+  let batchHasColor = false;
+  let batchOut = 0;
+  let outTotal = 0;
+  let hasColor = false;
+  const parts = [];
+  let partIdx = 0;
+
+  const flushBatch = async (sourceIndex) => {
+    if (batchOut === 0) return;
+    const positions = new Float32Array(batchOut * 9);
+    const colors = batchHasColor ? new Float32Array(batchOut * 9) : null;
+    for (let i = 0; i < batchOut * 9; i++) {
+      positions[i] = batchPositions[i];
+      if (colors) colors[i] = batchColors[i];
+    }
+    const geometry = buildBinaryStlGeometry(THREE, positions, colors, batchHasColor, computeNormals);
+    const part = {
+      name: parts.length > 0 ? `STL chunk ${partIdx + 1}` : 'STL',
+      geometry,
+      variant: batchHasColor ? 'binary-color' : 'binary',
+      triangleCount: triCount,
+      sampled: stride > 1,
+    };
+    parts.push(part);
+    await onBatch?.(part, sourceIndex, triCount);
+    partIdx++;
+    batchPositions = [];
+    batchColors = [];
+    batchHasColor = false;
+    batchOut = 0;
+    onProgress?.(sourceIndex, triCount, 'parse');
+    await yieldToMain(signal);
+  };
+
+  for (let i = 0; i < triCount; i += stride) {
+    throwIfCancelled(signal);
+    const base = start + i * BINARY_TRIANGLE_SIZE;
+    if (base + BINARY_TRIANGLE_SIZE > u8.length) break;
+
+    const attr = data.getUint16(base + 48, true);
+    const color = materialiseColor(attr);
+    if (color) {
+      hasColor = true;
+      batchHasColor = true;
+    }
+
+    for (let v = 0; v < 3; v++) {
+      const src = base + 12 + v * 12;
+      batchPositions.push(
+        data.getFloat32(src, true),
+        data.getFloat32(src + 4, true),
+        data.getFloat32(src + 8, true),
+      );
+      if (color) {
+        batchColors.push(color.r, color.g, color.b);
+      }
+    }
+    batchOut++;
+    outTotal++;
+
+    if (batchOut >= batchCap) {
+      await flushBatch(i);
+    }
   }
-  geometry.computeVertexNormals();
-  return [{ name: 'STL', geometry, variant: hasColor ? 'binary-color' : 'binary' }];
+
+  await flushBatch(triCount);
+  if (parts.length === 0) throw new Error('STL_NO_VERTICES');
+
+  const variant = hasColor ? 'binary-color' : 'binary';
+  if (stride > 1) parts[0].variant = `${variant}+sampled`;
+  parts[0].triangleCount = triCount;
+  return parts;
 }
 
 function parseAsciiStl(text, THREE) {
@@ -202,7 +308,16 @@ function parseWithThreeLoader(buffer, THREE) {
 /**
  * @returns {Promise<Array<{ name: string, geometry: THREE.BufferGeometry, variant: string }>>}
  */
-export async function loadStl(buffer, THREE, { ext = 'stl', signal, onProgress } = {}) {
+export async function loadStl(buffer, THREE, {
+  ext = 'stl',
+  signal,
+  onProgress,
+  onBatch,
+  progressive = false,
+  fastPreview = false,
+  maxTriangles = Infinity,
+  meshBatchSize = 50000,
+} = {}) {
   throwIfCancelled(signal);
   onProgress?.(0, 1, 'parse');
 
@@ -217,6 +332,8 @@ export async function loadStl(buffer, THREE, { ext = 'stl', signal, onProgress }
   const { bytes: stripped, offset } = stripBom(bytes);
   const work = offset > 0 ? stripped : bytes;
   const format = detectPreferredFormat(work, ext);
+  const computeNormals = !fastPreview;
+  const useProgressive = progressive && onBatch && looksLikeBinaryStl(work);
 
   let parts = [];
   const attempts = format === 'auto' ? ['binary', 'ascii'] : [format, format === 'binary' ? 'ascii' : 'binary'];
@@ -224,7 +341,24 @@ export async function loadStl(buffer, THREE, { ext = 'stl', signal, onProgress }
   for (const attempt of attempts) {
     try {
       if (attempt === 'binary' && looksLikeBinaryStl(work)) {
-        parts = parseBinaryStl(work, THREE, 0);
+        const triCount = readUInt32LE(work, 0);
+        const sampleStride = fastPreview
+          ? computeSampleStride(triCount, maxTriangles)
+          : 1;
+
+        if (useProgressive && triCount > meshBatchSize) {
+          parts = await parseBinaryStlProgressive(work, THREE, {
+            offset: 0,
+            sampleStride,
+            batchSize: meshBatchSize,
+            computeNormals,
+            signal,
+            onProgress,
+            onBatch,
+          });
+        } else {
+          parts = parseBinaryStl(work, THREE, 0, { sampleStride, computeNormals });
+        }
         break;
       }
       if (attempt === 'ascii' && looksLikeAsciiStl(work) && !isBinaryStlDespiteSolidHeader(work)) {
@@ -232,7 +366,8 @@ export async function loadStl(buffer, THREE, { ext = 'stl', signal, onProgress }
         parts = parseAsciiStl(text, THREE);
         if (parts.length > 0) break;
       }
-    } catch {
+    } catch (err) {
+      if (err?.message === 'STL_NO_VERTICES') throw err;
       // try next strategy
     }
   }
