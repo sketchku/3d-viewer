@@ -32,11 +32,17 @@ export function initPartTree({
   const root = () => getModelRoot?.() || modelGroup;
   let selectedIds = new Set();
 
-  document.addEventListener('editselectionchange', (e) => {
-    selectedIds = new Set(e.detail?.ids || []);
+  function syncTreeSelection(ids) {
+    selectedIds = new Set(ids || []);
     list.querySelectorAll('.tree-item').forEach((row) => {
-      row.classList.toggle('tree-item-selected', selectedIds.has(row.dataset.id));
+      const isSelected = selectedIds.has(row.dataset.id);
+      row.classList.toggle('tree-item-selected', isSelected);
+      if (isSelected) row.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     });
+  }
+
+  document.addEventListener('editselectionchange', (e) => {
+    syncTreeSelection(e.detail?.ids);
   });
 
   function setLayerColor(object, hex) {
@@ -183,7 +189,8 @@ export function initPartTree({
 
       row.appendChild(cbLabel);
 
-      span.addEventListener('click', (e) => {
+      row.addEventListener('click', (e) => {
+        if (e.target.closest('.tree-item-check input, .tree-layer-color')) return;
         e.preventDefault();
         onSelectObject?.(entry.object, e.shiftKey);
       });

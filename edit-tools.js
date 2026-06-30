@@ -67,6 +67,11 @@ export function initEditTools({
   let selected = new Set();
   let dragging = null;
   let pointerDown = null;
+  let lastPointer = null;
+
+  function isMeasureMode() {
+    return document.getElementById('toggle-measure')?.checked;
+  }
 
   function root() {
     return getModelRoot?.() || null;
@@ -242,16 +247,40 @@ export function initEditTools({
     canvas.classList.toggle('edit-mode', on);
     document.getElementById('edit-tools-controls')?.classList.toggle('hidden', !on);
     if (!on) {
-      clearSelection();
       dragging = null;
       controls.enabled = true;
     }
     const toggle = document.getElementById('toggle-edit-mode');
     if (toggle && toggle.checked !== on) toggle.checked = on;
+    updateSelectionUI();
+  }
+
+  function pickAt(clientX, clientY) {
+    return pickObject({ clientX, clientY });
+  }
+
+  function handleViewSelection(clientX, clientY, shiftKey) {
+    if (isMeasureMode()) return;
+    const hit = pickAt(clientX, clientY);
+    if (hit) {
+      if (shiftKey) toggleSelection(hit, true);
+      else setSelection([hit]);
+      return;
+    }
+    if (!shiftKey) clearSelection();
   }
 
   function onPointerDown(event) {
-    if (!editMode || event.button !== 0) return;
+    if (event.button !== 0) return;
+    lastPointer = { x: event.clientX, y: event.clientY };
+
+    if (!editMode) {
+      if (!isMeasureMode() && root()?.children.length) {
+        pointerDown = { x: event.clientX, y: event.clientY, shift: event.shiftKey, viewPick: true };
+      }
+      return;
+    }
+
     pointerDown = { x: event.clientX, y: event.clientY, shift: event.shiftKey };
     const hit = pickObject(event);
     if (hit) {
@@ -274,6 +303,13 @@ export function initEditTools({
   }
 
   function onPointerMove(event) {
+    lastPointer = { x: event.clientX, y: event.clientY };
+
+    if (!editMode && !dragging?.active && !isMeasureMode() && root()?.children.length) {
+      const hit = pickAt(event.clientX, event.clientY);
+      canvas.style.cursor = hit ? 'pointer' : '';
+    }
+
     if (!editMode || !pointerDown) return;
     const dist = Math.hypot(event.clientX - pointerDown.x, event.clientY - pointerDown.y);
     if (dragging?.ready && !dragging.active) {
@@ -292,7 +328,16 @@ export function initEditTools({
     event.preventDefault();
   }
 
-  function onPointerUp() {
+  function onPointerUp(event) {
+    if (pointerDown?.viewPick && !editMode) {
+      const px = event?.clientX ?? lastPointer?.x ?? pointerDown.x;
+      const py = event?.clientY ?? lastPointer?.y ?? pointerDown.y;
+      const dist = Math.hypot(px - pointerDown.x, py - pointerDown.y);
+      if (dist < DRAG_THRESHOLD) {
+        handleViewSelection(pointerDown.x, pointerDown.y, pointerDown.shift);
+      }
+    }
+
     if (dragging?.active) {
       showToast(t('editMoved'), 'success');
       onStructureChange?.();
@@ -300,6 +345,7 @@ export function initEditTools({
     dragging = null;
     pointerDown = null;
     controls.enabled = true;
+    if (!editMode && !isMeasureMode()) canvas.style.cursor = '';
   }
 
   function bindUI() {
@@ -345,8 +391,11 @@ export function initEditTools({
       r.traverse((child) => {
         if (child.uuid === uuid && isSelectableObject(child)) found = child;
       });
-      if (found) toggleSelection(found, additive);
+      if (!found) return;
+      if (additive) toggleSelection(found, true);
+      else setSelection([found]);
     },
+    getSelectedUuids: () => [...selected].map((o) => o.uuid),
     isEditMode: () => editMode,
     onModelLoaded() {
       clearSelection();

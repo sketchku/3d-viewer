@@ -16,8 +16,8 @@ import { initViewerFeatures } from './viewer-features.js?v=2.6.12';
 import { initRecentFiles, saveRecentFile } from './recent-files.js?v=2.4.1';
 import { initModelTabs, captureModelThumbnail } from './model-tabs.js?v=2.6.1';
 import { initMultiModelView } from './multi-model-view.js?v=2.6.11';
-import { initEditTools } from './edit-tools.js?v=2.6.12';
-import { initPartTree, tagPart } from './part-tree.js?v=2.6.7';
+import { initEditTools } from './edit-tools.js?v=2.6.15';
+import { initPartTree, tagPart } from './part-tree.js?v=2.6.15';
 import {
   resolveLoadStrategy,
   readFileWithProgress,
@@ -392,6 +392,7 @@ function applyMultiModelActive(entry) {
   btnExport.disabled = entry.is2d;
   btnDrawing.disabled = entry.is2d;
   updateStats();
+  editToolsMgr?.clearSelection();
   partTreeMgr?.refresh(entry.is2d ? 'layers' : 'parts');
 }
 
@@ -463,7 +464,6 @@ async function init() {
     openColorPicker: (opts) => colorPickerMgr.open(opts),
     onSelectObject: (obj, additive) => {
       if (!editToolsMgr) return;
-      editToolsMgr.setEditMode(true);
       editToolsMgr.selectByUuid(obj.uuid, additive);
     },
   });
