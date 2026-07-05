@@ -303,17 +303,7 @@ export async function initVisitorChat({ t, showToast, getLang }) {
     const dockBtn = document.getElementById('sidebar-lab-btn');
     dockBtn?.setAttribute('aria-expanded', open ? 'true' : 'false');
     dockBtn?.classList.toggle('active', open);
-    if (open) {
-      document.querySelectorAll('.sidebar-popup').forEach((el) => {
-        if (el !== popup) el.classList.add('hidden');
-      });
-      document.querySelectorAll('.sidebar-dock .dock-tab').forEach((btn) => {
-        if (btn !== dockBtn) {
-          btn.setAttribute('aria-expanded', 'false');
-          btn.classList.remove('active');
-        }
-      });
-    }
+    document.dispatchEvent(new CustomEvent('sidebar-lab-toggle', { detail: { open } }));
   }
 
   function setSending(active) {

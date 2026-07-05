@@ -41,7 +41,7 @@ import {
 } from './cad-step-convert.js?v=2.5.0';
 import { isStaticWebDeployment } from './web-config.js?v=2.5.0';
 import { createBgPixels, loadBgFromStorage } from './bg-pixels.js?v=2.10.0';
-import { initSidebarDock } from './sidebar-dock.js?v=2.10.3';
+import { initSidebarDock } from './sidebar-dock.js?v=2.10.4';
 import { initColorPicker } from './color-picker.js?v=2.6.7';
 
 let cad2dModule = null;
@@ -207,10 +207,7 @@ spaceTravelExitBtn?.addEventListener('click', () => setSpaceTravelMode(false));
 
 document.addEventListener('keydown', (e) => {
   if (e.key !== 'Escape') return;
-  if (sidebarDockApi?.isAnyOpen?.()) {
-    sidebarDockApi?.closeAll?.();
-    return;
-  }
+  if (sidebarDockApi?.closeLast?.()) return;
   if (bgPixels.getSettings().spaceTravel) setSpaceTravelMode(false);
 });
 const bgColorInput = document.getElementById('bg-color');

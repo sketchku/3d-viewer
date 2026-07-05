@@ -2,6 +2,9 @@
 
 import { initLabFeatures } from './viewport-dock.js';
 
+const CASCADE_OFFSET_X = 28;
+const CASCADE_OFFSET_Y = 32;
+
 function closePopup(popup, btn) {
   popup?.classList.add('hidden');
   btn?.setAttribute('aria-expanded', 'false');
@@ -14,7 +17,17 @@ function openPopup(popup, btn) {
   btn?.classList.add('active');
 }
 
-function initPopupDrag(popup, container) {
+function resetPopupPosition(popup) {
+  if (!popup) return;
+  popup.classList.remove('sidebar-popup-positioned');
+  popup.style.left = '';
+  popup.style.top = '';
+  popup.style.transform = '';
+  popup.style.zIndex = '';
+  delete popup.dataset.userPositioned;
+}
+
+function initPopupDrag(popup, container, onUserPositioned) {
   const handle = popup?.querySelector('.dock-popup-drag-handle');
   if (!handle || !popup || !container) return;
 
@@ -81,6 +94,10 @@ function initPopupDrag(popup, container) {
       pointerId = null;
     }
     handle.classList.remove('dock-dragging');
+    if (popup.classList.contains('sidebar-popup-positioned')) {
+      popup.dataset.userPositioned = 'true';
+      onUserPositioned?.();
+    }
   }
 
   handle.addEventListener('pointerup', endDrag);
@@ -122,21 +139,95 @@ export function initSidebarDock(opts = {}) {
     popup: document.getElementById(popup),
   }));
 
+  /** @type {string[]} */
+  const openOrder = [];
+
   let labApi = null;
   if (bgPixels) {
     labApi = initLabFeatures({ bgPixels, t, showToast, onSpaceTravelChange });
   }
 
-  for (const { popup } of popups) {
-    initPopupDrag(popup, app);
+  function isEntryOpen(entry) {
+    return entry?.popup && !entry.popup.classList.contains('hidden');
   }
 
-  function closeAll(exceptId) {
-    for (const { popup, btn, id } of popups) {
-      if (id === exceptId) continue;
-      closePopup(popup, btn);
-      if (id === 'lab' && chatApi?.setExpanded) chatApi.setExpanded(false);
+  function getOpenEntries() {
+    return openOrder
+      .map((id) => popups.find((p) => p.id === id))
+      .filter((entry) => entry && isEntryOpen(entry));
+  }
+
+  function getSidebarWidth() {
+    const raw = getComputedStyle(document.documentElement).getPropertyValue('--sidebar-width').trim();
+    const value = parseFloat(raw);
+    return Number.isFinite(value) ? value : 72;
+  }
+
+  function layoutCascade() {
+    if (!app) return;
+    const bounds = app.getBoundingClientRect();
+    const rtl = document.documentElement.dir === 'rtl';
+    const sidebarW = getSidebarWidth();
+    const openEntries = getOpenEntries();
+
+    openEntries.forEach((entry, index) => {
+      const popup = entry.popup;
+      if (popup.dataset.userPositioned === 'true') return;
+
+      const w = popup.offsetWidth || 320;
+      const h = popup.offsetHeight || 320;
+      const baseTop = Math.max(8, (bounds.height - h) / 2);
+      const left = rtl
+        ? bounds.width - sidebarW - 10 - w - index * CASCADE_OFFSET_X
+        : sidebarW + 10 + index * CASCADE_OFFSET_X;
+      const top = baseTop + index * CASCADE_OFFSET_Y;
+
+      popup.classList.add('sidebar-popup-positioned');
+      popup.style.left = `${left}px`;
+      popup.style.top = `${top}px`;
+      popup.style.right = 'auto';
+      popup.style.transform = 'none';
+      popup.style.zIndex = `${14 + index}`;
+    });
+  }
+
+  function showEntry(entry) {
+    if (!entry?.popup || !entry.btn) return;
+    openPopup(entry.popup, entry.btn);
+    if (!openOrder.includes(entry.id)) openOrder.push(entry.id);
+    requestAnimationFrame(() => layoutCascade());
+  }
+
+  function hideEntry(entry) {
+    if (!entry?.popup || !entry.btn) return;
+    closePopup(entry.popup, entry.btn);
+    const idx = openOrder.indexOf(entry.id);
+    if (idx >= 0) openOrder.splice(idx, 1);
+    resetPopupPosition(entry.popup);
+    requestAnimationFrame(() => layoutCascade());
+  }
+
+  for (const { popup } of popups) {
+    initPopupDrag(popup, app, layoutCascade);
+  }
+
+  function closeAll() {
+    for (const entry of popups) {
+      if (!isEntryOpen(entry)) continue;
+      closePopup(entry.popup, entry.btn);
+      resetPopupPosition(entry.popup);
     }
+    openOrder.length = 0;
+    chatApi?.setExpanded?.(false);
+  }
+
+  function closeLast() {
+    const openEntries = getOpenEntries();
+    if (!openEntries.length) return false;
+    const last = openEntries[openEntries.length - 1];
+    hideEntry(last);
+    if (last.id === 'lab') chatApi?.setExpanded?.(false);
+    return true;
   }
 
   function isAnyOpen() {
@@ -145,42 +236,50 @@ export function initSidebarDock(opts = {}) {
 
   function openById(id) {
     const entry = popups.find((p) => p.id === id);
-    if (!entry?.popup || !entry.btn) return;
-    closeAll(id);
-    openPopup(entry.popup, entry.btn);
+    if (!entry?.popup || !entry.btn || isEntryOpen(entry)) return;
+    showEntry(entry);
     if (id === 'lab') {
       labApi?.syncSettings?.();
       chatApi?.setExpanded?.(true);
     }
   }
 
-  for (const { popup, btn, id } of popups) {
+  function toggleEntry(entry) {
+    if (isEntryOpen(entry)) {
+      hideEntry(entry);
+      if (entry.id === 'lab') chatApi?.setExpanded?.(false);
+      return;
+    }
+    showEntry(entry);
+    if (entry.id === 'lab') {
+      labApi?.syncSettings?.();
+      chatApi?.setExpanded?.(true);
+    }
+  }
+
+  for (const entry of popups) {
+    const { popup, btn, id } = entry;
     btn?.addEventListener('click', (e) => {
       e.stopPropagation();
-      if (id === 'lab') {
-        const isOpen = chatApi?.getExpanded?.() ?? !popup?.classList.contains('hidden');
-        const willOpen = !isOpen;
-        closeAll(willOpen ? 'lab' : null);
-        if (chatApi?.setExpanded) {
-          chatApi.setExpanded(willOpen);
-        } else if (willOpen) {
-          openPopup(popup, btn);
+      if (id === 'lab' && chatApi?.getExpanded && chatApi?.setExpanded) {
+        const willOpen = !chatApi.getExpanded();
+        if (willOpen) {
+          showEntry(entry);
           labApi?.syncSettings?.();
+          chatApi.setExpanded(true);
         } else {
-          closePopup(popup, btn);
+          hideEntry(entry);
+          chatApi.setExpanded(false);
         }
         return;
       }
-      const open = popup?.classList.contains('hidden');
-      closeAll(open ? id : null);
-      if (open) openPopup(popup, btn);
-      else closePopup(popup, btn);
+      toggleEntry(entry);
     });
 
     popup?.querySelector('.dock-popup-close')?.addEventListener('click', (e) => {
       e.stopPropagation();
-      closeAll();
-      chatApi?.setExpanded?.(false);
+      hideEntry(entry);
+      if (id === 'lab') chatApi?.setExpanded?.(false);
     });
   }
 
@@ -188,7 +287,6 @@ export function initSidebarDock(opts = {}) {
     const target = e.target;
     if (target instanceof Element && target.closest('.sidebar-dock, .sidebar-popup, .space-travel-exit')) return;
     closeAll();
-    chatApi?.setExpanded?.(false);
   });
 
   for (const { popup } of popups) {
@@ -204,7 +302,6 @@ export function initSidebarDock(opts = {}) {
   brandBtn?.addEventListener('click', (e) => {
     e.stopPropagation();
     closeAll();
-    chatApi?.setExpanded?.(false);
     brandIcon?.classList.add('spin-once');
     brandBtn.disabled = true;
     window.setTimeout(() => window.location.reload(), 320);
@@ -213,13 +310,29 @@ export function initSidebarDock(opts = {}) {
   function setTreeSectionVisible(visible) {
     const section = document.getElementById('model-tree-section');
     section?.classList.toggle('hidden', !visible);
-    if (!visible) {
-      const entry = popups.find((p) => p.id === 'model');
-      if (entry?.popup && !entry.popup.classList.contains('hidden')) {
-        // keep model popup open, just hide tree section
-      }
-    }
   }
 
-  return { closeAll, isAnyOpen, openById, setTreeButtonVisible: setTreeSectionVisible, syncLabSettings: () => labApi?.syncSettings?.() };
+  document.addEventListener('sidebar-lab-toggle', (e) => {
+    const open = !!e.detail?.open;
+    const labEntry = popups.find((p) => p.id === 'lab');
+    if (!labEntry) return;
+    if (open) {
+      if (!openOrder.includes('lab')) openOrder.push('lab');
+      requestAnimationFrame(() => layoutCascade());
+      return;
+    }
+    const idx = openOrder.indexOf('lab');
+    if (idx >= 0) openOrder.splice(idx, 1);
+    resetPopupPosition(labEntry.popup);
+    requestAnimationFrame(() => layoutCascade());
+  });
+
+  return {
+    closeAll,
+    closeLast,
+    isAnyOpen,
+    openById,
+    setTreeButtonVisible: setTreeSectionVisible,
+    syncLabSettings: () => labApi?.syncSettings?.(),
+  };
 }

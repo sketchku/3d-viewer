@@ -424,7 +424,19 @@
       <canvas id="canvas"></canvas>
       <div id="toast" class="toast hidden"></div>
 
-      <button type="button" id="space-travel-exit" class="space-travel-exit hidden" data-i18n="bgSpaceTravelExit" data-i18n-title="bgSpaceTravelExitTitle" title="복귀 (Esc)">복귀</button>
+      <button type="button" id="space-travel-exit" class="space-travel-exit hidden" data-i18n-title="bgSpaceTravelExitTitle" data-i18n-aria-label="bgSpaceTravelExit" title="복귀 (Esc)" aria-label="복귀">
+        <span class="dock-tab-thumb space-travel-exit-thumb">
+          <svg class="dock-tab-icon wormhole-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+            <ellipse cx="12" cy="12" rx="10" ry="6" opacity="0.28"/>
+            <ellipse cx="12" cy="12" rx="8" ry="4.8"/>
+            <ellipse cx="12" cy="12" rx="5.5" ry="3.2" opacity="0.85"/>
+            <ellipse cx="12" cy="12" rx="3" ry="1.7"/>
+            <ellipse cx="12" cy="12" rx="1" ry="0.55" fill="currentColor" stroke="none"/>
+            <path d="M4.5 10.5c2.5-2 5.5-2.8 7.5-2" stroke-linecap="round"/>
+            <path d="M19.5 13.5c-2.5 2-5.5 2.8-7.5 2" stroke-linecap="round"/>
+          </svg>
+        </span>
+      </button>
     </main>
 
     <div id="loading" class="loading-screen hidden" aria-live="polite" aria-busy="false">
@@ -597,7 +609,7 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/occt-import-js@0.0.23/dist/occt-import-js.js"></script>
-  <script type="module" src="i18n-boot.js?v=2.10.3"></script>
-  <script type="module" src="app.js?v=2.10.3"></script>
+  <script type="module" src="i18n-boot.js?v=2.10.4"></script>
+  <script type="module" src="app.js?v=2.10.4"></script>
 </body>
 </html>

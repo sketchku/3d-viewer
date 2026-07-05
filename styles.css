@@ -47,21 +47,47 @@ html, body {
   top: 14px;
   right: 14px;
   z-index: 20;
-  padding: 8px 14px;
-  font-size: 0.78rem;
-  font-family: inherit;
-  color: var(--text);
-  background: rgba(15, 17, 23, 0.82);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  width: 52px;
+  padding: 3px 2px 4px;
+  background: transparent;
+  border: 2px solid transparent;
+  border-radius: 10px;
   cursor: pointer;
-  backdrop-filter: blur(6px);
+  font-family: var(--font);
+  color: inherit;
   pointer-events: auto;
+  transition: border-color 0.15s, background 0.15s;
 }
 
 .space-travel-exit:hover {
-  border-color: var(--accent);
-  color: var(--accent);
+  background: rgba(168, 130, 255, 0.1);
+  border-color: rgba(168, 130, 255, 0.4);
+}
+
+.space-travel-exit-thumb {
+  color: #a882ff;
+  border-color: rgba(168, 130, 255, 0.35);
+  background: rgba(15, 17, 23, 0.82);
+  backdrop-filter: blur(6px);
+}
+
+.space-travel-exit:hover .space-travel-exit-thumb {
+  color: #c4a8ff;
+  border-color: rgba(168, 130, 255, 0.55);
+  background: rgba(168, 130, 255, 0.12);
+}
+
+.wormhole-icon {
+  animation: wormhole-pulse 3s ease-in-out infinite;
+}
+
+@keyframes wormhole-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
 }
 
 .space-travel-exit.hidden {
@@ -2093,6 +2119,11 @@ body.is-loading {
 [dir="rtl"] .sidebar-popup.dock-popup {
   left: auto;
   right: calc(var(--sidebar-width) + 10px);
+}
+
+[dir="rtl"] .space-travel-exit {
+  right: auto;
+  left: 14px;
 }
 
 [dir="rtl"] .drawing-view-tag.top,
