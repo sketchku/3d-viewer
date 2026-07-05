@@ -1,6 +1,12 @@
 /** Background settings: layer visibility, space travel, presets. */
 
-import { DEFAULT_BG_PARAMS, DEFAULT_BG_SETTINGS } from './bg-pixels.js';
+import {
+  DEFAULT_BG_PARAMS,
+  DEFAULT_BG_SETTINGS,
+  GLOBAL_SPEED_STEPS,
+  globalSpeedFromIndex,
+  globalSpeedToIndex,
+} from './bg-pixels.js';
 
 const LAYER_SPECS = [
   { key: 'disk', labelKey: 'bgLayerDisk' },
@@ -135,7 +141,7 @@ export function initBgSettingsUI(container, bgPixels, opts = {}) {
       <span data-i18n="bgGlobalSpeed">${t('bgGlobalSpeed')}</span>
       <span class="bg-pixels-val" data-for="bg-global-speed"></span>
     </label>
-    <input type="range" id="bg-global-speed" min="0.3" max="2" step="0.1" />
+    <input type="range" id="bg-global-speed" min="0" max="${GLOBAL_SPEED_STEPS.length - 1}" step="1" />
   `;
   sliderSection.appendChild(speedRow);
 
@@ -173,7 +179,13 @@ export function initBgSettingsUI(container, bgPixels, opts = {}) {
 
   function formatVal(id, value) {
     const el = container.querySelector(`[data-for="${id}"]`);
-    if (el) el.textContent = Number(value).toFixed(1);
+    if (!el) return;
+    const n = Number(value);
+    if (id === 'bg-global-speed' && n < 0.3) {
+      el.textContent = n.toFixed(2);
+    } else {
+      el.textContent = n.toFixed(1);
+    }
   }
 
   function syncFromSettings() {
@@ -184,8 +196,9 @@ export function initBgSettingsUI(container, bgPixels, opts = {}) {
       formatVal('bg-warp-intensity', s.warpIntensity);
     }
     if (speedInput) {
-      speedInput.value = String(s.globalSpeed);
-      formatVal('bg-global-speed', s.globalSpeed);
+      const speed = globalSpeedFromIndex(globalSpeedToIndex(s.globalSpeed));
+      speedInput.value = String(globalSpeedToIndex(speed));
+      formatVal('bg-global-speed', speed);
     }
     if (autoSaveInput) autoSaveInput.checked = s.autoSave;
     for (const input of layerInputs) {
@@ -220,7 +233,7 @@ export function initBgSettingsUI(container, bgPixels, opts = {}) {
   });
 
   speedInput?.addEventListener('input', () => {
-    const v = Number(speedInput.value);
+    const v = globalSpeedFromIndex(speedInput.value);
     formatVal('bg-global-speed', v);
     bgPixels.setSettings({ globalSpeed: v });
     emitChange();

@@ -33,6 +33,35 @@ export const BG_STORAGE_KEYS = {
   settings: '3d-viewer-bg-settings',
 };
 
+/** 10 ultra-slow steps below the former minimum (0.3), then 0.1 steps to 2.0. */
+const GLOBAL_SPEED_ULTRA_SLOW = [0, 0.03, 0.06, 0.09, 0.12, 0.15, 0.18, 0.21, 0.24, 0.27];
+const GLOBAL_SPEED_NORMAL = Array.from({ length: 18 }, (_, i) => Math.round((0.3 + i * 0.1) * 10) / 10);
+export const GLOBAL_SPEED_STEPS = [...GLOBAL_SPEED_ULTRA_SLOW, ...GLOBAL_SPEED_NORMAL];
+
+export function snapGlobalSpeed(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return DEFAULT_BG_SETTINGS.globalSpeed;
+  let best = GLOBAL_SPEED_STEPS[0];
+  let bestDist = Math.abs(n - best);
+  for (const step of GLOBAL_SPEED_STEPS) {
+    const dist = Math.abs(n - step);
+    if (dist < bestDist) {
+      best = step;
+      bestDist = dist;
+    }
+  }
+  return best;
+}
+
+export function globalSpeedToIndex(value) {
+  return GLOBAL_SPEED_STEPS.indexOf(snapGlobalSpeed(value));
+}
+
+export function globalSpeedFromIndex(index) {
+  const i = Math.max(0, Math.min(GLOBAL_SPEED_STEPS.length - 1, Math.round(Number(index))));
+  return GLOBAL_SPEED_STEPS[i];
+}
+
 const WARP_STREAK_COUNT = 96;
 
 const STAR_RGB = [145, 158, 185];
