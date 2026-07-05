@@ -630,7 +630,18 @@ function createTextSprite(THREE, text, height, color, anchor = { x: 0, y: 0 }) {
   const unitScale = lineHeight / fontPx;
   sprite.scale.set(canvas.width * unitScale, canvas.height * unitScale, 1);
   sprite.center.set(anchor.x, anchor.y);
+  sprite.userData.isCadText = true;
   return sprite;
+}
+
+/** Show or hide DXF/DWG/AI text sprites in a loaded model group. */
+export function setCadTextVisible(root, visible) {
+  if (!root) return;
+  root.traverse((child) => {
+    if (child.isSprite && child.userData?.isCadText) {
+      child.visible = !!visible;
+    }
+  });
 }
 
 function repairDxfText(text) {

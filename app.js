@@ -10,8 +10,8 @@ import { PLYExporter } from 'three/addons/exporters/PLYExporter.js';
 import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
 import { SimplifyModifier } from 'three/addons/modifiers/SimplifyModifier.js';
 import { generateThreeViewDXF } from './drawing-export.js?v=2.4.1';
-import { t, getLanguage } from './i18n.js?v=2.7.3';
-import { initVisitorChat } from './visitor-chat.js?v=2.7.3';
+import { t, getLanguage } from './i18n.js?v=2.7.4';
+import { initVisitorChat } from './visitor-chat.js?v=2.7.4';
 import { initViewerFeatures } from './viewer-features.js?v=2.6.12';
 import { initRecentFiles, saveRecentFile } from './recent-files.js?v=2.4.1';
 import { initModelTabs, captureModelThumbnail } from './model-tabs.js?v=2.6.1';
@@ -40,14 +40,14 @@ import {
   getConvertBackendsForExt,
 } from './cad-step-convert.js?v=2.5.0';
 import { isStaticWebDeployment } from './web-config.js?v=2.5.0';
-import { createBgPixels, loadBgFromStorage } from './bg-pixels.js?v=2.7.3';
-import { initViewportDock } from './viewport-dock.js?v=2.7.3';
+import { createBgPixels, loadBgFromStorage } from './bg-pixels.js?v=2.7.4';
+import { initViewportDock } from './viewport-dock.js?v=2.7.4';
 import { initColorPicker } from './color-picker.js?v=2.6.7';
 
 let cad2dModule = null;
 async function getCad2dModule() {
   if (!cad2dModule) {
-    cad2dModule = await import('./cad2d-loader.js?v=2.6.10');
+    cad2dModule = await import('./cad2d-loader.js?v=2.7.4');
   }
   return cad2dModule;
 }
@@ -296,6 +296,7 @@ scene.add(modelGroup);
 let occt = null;
 let defaultMaterial = null;
 let autoRotate = false;
+let showCadText = true;
 const AUTO_ROTATE_SPEED = 1.5;
 let initialCameraState = null;
 let currentFile = null; // { name, ext, buffer: ArrayBuffer }
@@ -685,6 +686,12 @@ function getBgColor() {
   return document.getElementById('bg-color')?.value || '#1a1d23';
 }
 
+async function applyCadTextVisibility(show = showCadText) {
+  const cad2d = await getCad2dModule().catch(() => null);
+  if (!cad2d?.setCadTextVisible) return;
+  cad2d.setCadTextVisible(modelGroup, show);
+}
+
 function getModelColor() {
   return document.getElementById('model-color')?.value || '#6b9bd1';
 }
@@ -811,6 +818,10 @@ function setupUI() {
     modelGroup.traverse((child) => {
       if (child.isMesh) child.material.wireframe = e.target.checked;
     });
+  });
+  document.getElementById('toggle-cad-text')?.addEventListener('change', (e) => {
+    showCadText = e.target.checked;
+    applyCadTextVisibility(showCadText);
   });
   document.getElementById('toggle-auto-rotate').addEventListener('change', (e) => {
     autoRotate = e.target.checked;
@@ -1192,6 +1203,7 @@ async function loadCAD2D(buffer, ext, { strategy, onProgress, signal } = {}) {
   target.userData.cadFrameBox = cadGroup.userData.cadFrameBox || null;
   target.userData.cadSource = ext;
   if (target === modelGroup) updatePixelBackground(ext);
+  await applyCadTextVisibility(showCadText);
 }
 
 async function addCadMesh(meshData, index, strategy, onProgress, total) {
