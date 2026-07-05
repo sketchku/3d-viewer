@@ -87,13 +87,25 @@ function formatValue(value, step) {
  * @param {HTMLElement} container
  * @param {{ getParams: Function, setParams: Function }} bgPixels
  */
-export function initBgPixelsUI(container, bgPixels) {
+/**
+ * @param {HTMLElement} container
+ * @param {{ getParams: Function, setParams: Function, saveAll?: Function }} bgPixels
+ * @param {{ onSave?: Function, t?: Function }} opts
+ */
+export function initBgPixelsUI(container, bgPixels, opts = {}) {
+  const t = opts.t ?? ((key) => key);
   container.innerHTML = '';
   container.classList.add('bg-pixels-panel');
 
   const header = document.createElement('div');
   header.className = 'bg-pixels-panel-head';
-  header.innerHTML = '<h2>배경 파티클</h2><button type="button" class="bg-pixels-reset">기본값</button>';
+  header.innerHTML = `
+    <h2 data-i18n="bgParamsTitle">배경 파티클</h2>
+    <div class="bg-pixels-actions">
+      <button type="button" class="bg-pixels-save" data-i18n="bgSave">저장</button>
+      <button type="button" class="bg-pixels-reset" data-i18n="bgReset">기본값</button>
+    </div>
+  `;
   container.appendChild(header);
 
   const sliders = new Map();
@@ -159,6 +171,11 @@ export function initBgPixelsUI(container, bgPixels) {
   }
 
   container.addEventListener('input', onInput);
+
+  header.querySelector('.bg-pixels-save')?.addEventListener('click', () => {
+    const ok = bgPixels.saveAll?.() ?? false;
+    opts.onSave?.(ok);
+  });
 
   header.querySelector('.bg-pixels-reset')?.addEventListener('click', () => {
     bgPixels.setParams(DEFAULT_BG_PARAMS, { replace: true });

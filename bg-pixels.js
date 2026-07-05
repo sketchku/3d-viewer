@@ -11,6 +11,30 @@ export const DEFAULT_BG_PARAMS = {
   blackHole: { radiusScale: 1 },
 };
 
+export const DEFAULT_BG_SETTINGS = {
+  visibility: {
+    disk: true,
+    photon: true,
+    boundary: true,
+    inflow: true,
+    field: true,
+    arc: true,
+    blackHole: true,
+    warp: true,
+  },
+  spaceTravel: false,
+  warpIntensity: 1,
+  globalSpeed: 1,
+  autoSave: false,
+};
+
+export const BG_STORAGE_KEYS = {
+  params: '3d-viewer-bg-params',
+  settings: '3d-viewer-bg-settings',
+};
+
+const WARP_STREAK_COUNT = 96;
+
 const STAR_RGB = [145, 158, 185];
 const PHOTON_RGB = [255, 228, 175];
 const DISK_HOT = [255, 205, 130];
@@ -38,6 +62,49 @@ function deepMerge(target, source) {
 
 function cloneParams(params) {
   return deepMerge(params, {});
+}
+
+function cloneSettings(settings) {
+  return deepMerge(DEFAULT_BG_SETTINGS, settings);
+}
+
+export function loadBgFromStorage() {
+  try {
+    const paramsRaw = localStorage.getItem(BG_STORAGE_KEYS.params);
+    const settingsRaw = localStorage.getItem(BG_STORAGE_KEYS.settings);
+    return {
+      params: paramsRaw ? JSON.parse(paramsRaw) : null,
+      settings: settingsRaw ? JSON.parse(settingsRaw) : null,
+    };
+  } catch {
+    return { params: null, settings: null };
+  }
+}
+
+export function saveBgToStorage(params, settings) {
+  try {
+    localStorage.setItem(BG_STORAGE_KEYS.params, JSON.stringify(params));
+    localStorage.setItem(BG_STORAGE_KEYS.settings, JSON.stringify(settings));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function spawnWarpStreak() {
+  const angle = Math.random() * Math.PI * 2;
+  const maxVel = 6 + Math.random() * 14;
+  return {
+    angle,
+    dist: Math.random() * 0.04,
+    vel: 0.4 + Math.random() * 1.2,
+    maxVel,
+    accel: 0.06 + Math.random() * 0.14,
+    lineLen: 0,
+    sizeBase: Math.random() > 0.7 ? 2 : 1.5,
+    twinkle: Math.random() * Math.PI * 2,
+    rgb: Math.random() > 0.35 ? STAR_RGB : PHOTON_RGB,
+  };
 }
 
 function dopplerAlpha(angle) {
@@ -245,9 +312,10 @@ function drawBlackHole(ctx, cx, cy, holeR, bgColor) {
   ctx.globalAlpha = 1;
 }
 
-export function createBgPixels(canvas, viewport, initialParams = {}) {
+export function createBgPixels(canvas, viewport, initialParams = {}, initialSettings = {}) {
   const ctx = canvas.getContext('2d', { alpha: false });
   let params = deepMerge(DEFAULT_BG_PARAMS, initialParams);
+  let settings = cloneSettings(initialSettings);
   let w = 0;
   let h = 0;
   let base = 1;
@@ -256,6 +324,8 @@ export function createBgPixels(canvas, viewport, initialParams = {}) {
   let enabled = true;
   let visible = document.visibilityState === 'visible';
   let time = 0;
+  let spaceTravelPhase = 0;
+  let onSpaceTravelChange = null;
 
   let boundaryStars = [];
   let inflowStars = [];
@@ -263,6 +333,7 @@ export function createBgPixels(canvas, viewport, initialParams = {}) {
   let diskDots = [];
   let photonDots = [];
   let arcStars = [];
+  let warpStreaks = [];
 
   document.addEventListener('visibilitychange', () => {
     visible = document.visibilityState === 'visible';
@@ -299,6 +370,10 @@ export function createBgPixels(canvas, viewport, initialParams = {}) {
     }
   }
 
+  function initWarpStreaks() {
+    warpStreaks = Array.from({ length: WARP_STREAK_COUNT }, () => spawnWarpStreak());
+  }
+
   function initParticles() {
     rebuildGroup('boundary');
     rebuildGroup('inflow');
@@ -306,6 +381,7 @@ export function createBgPixels(canvas, viewport, initialParams = {}) {
     rebuildGroup('disk');
     rebuildGroup('photon');
     rebuildGroup('arc');
+    initWarpStreaks();
   }
 
   function resize() {
@@ -349,6 +425,8 @@ export function createBgPixels(canvas, viewport, initialParams = {}) {
     params = replace ? cloneParams(deepMerge(DEFAULT_BG_PARAMS, partial)) : deepMerge(params, partial);
     holeR = base * params.global.holeRadius;
 
+    if (settings.autoSave) saveBgToStorage(params, settings);
+
     if (prev.global.holeRadius !== params.global.holeRadius) {
       initParticles();
       return;
@@ -360,25 +438,91 @@ export function createBgPixels(canvas, viewport, initialParams = {}) {
     }
   }
 
-  function tick() {
-    if (!enabled || !visible || w <= 0 || h <= 0) return;
+  function getSettings() {
+    return cloneSettings(settings);
+  }
 
-    time += 1;
-    const cx = w * 0.5;
-    const cy = h * 0.5;
-    const p = params;
+  function setSettings(partial, { replace = false } = {}) {
+    const prevTravel = settings.spaceTravel;
+    settings = replace
+      ? cloneSettings(deepMerge(DEFAULT_BG_SETTINGS, partial))
+      : cloneSettings(deepMerge(settings, partial));
+
+    if (settings.autoSave) saveBgToStorage(params, settings);
+
+    if (prevTravel !== settings.spaceTravel) {
+      spaceTravelPhase = 0;
+      if (settings.spaceTravel) initWarpStreaks();
+      onSpaceTravelChange?.(settings.spaceTravel);
+    }
+  }
+
+  function saveAll() {
+    return saveBgToStorage(params, settings);
+  }
+
+  function loadSaved() {
+    const saved = loadBgFromStorage();
+    if (saved.params) setParams(saved.params, { replace: true });
+    if (saved.settings) setSettings(saved.settings, { replace: true });
+    return saved;
+  }
+
+  function setOnSpaceTravelChange(fn) {
+    onSpaceTravelChange = typeof fn === 'function' ? fn : null;
+  }
+
+  function drawWarpStreaks(cx, cy, speedMul, intensity) {
+    const maxDist = Math.max(w, h) * 0.72;
+    const count = Math.round(WARP_STREAK_COUNT * (0.45 + intensity * 0.55));
+
+    for (let i = 0; i < count; i++) {
+      const streak = warpStreaks[i];
+      if (!streak) continue;
+
+      const plateau = 1 - streak.vel / streak.maxVel;
+      streak.vel += streak.accel * plateau * plateau * speedMul;
+      streak.dist += streak.vel * 0.85 * speedMul;
+      streak.lineLen = Math.min(streak.lineLen + streak.vel * 0.42, streak.vel * 5.5);
+
+      if (streak.dist > maxDist) Object.assign(streak, spawnWarpStreak());
+
+      const headDist = streak.dist * base;
+      const hx = cx + Math.cos(streak.angle) * headDist;
+      const hy = cy + Math.sin(streak.angle) * headDist;
+      const tailLen = streak.lineLen * base * (0.35 + intensity * 0.25);
+      const tx = hx - Math.cos(streak.angle) * tailLen;
+      const ty = hy - Math.sin(streak.angle) * tailLen;
+
+      const speedT = streak.vel / streak.maxVel;
+      const alpha = (0.12 + speedT * 0.55) * (0.7 + intensity * 0.3);
+      const [r, g, b] = streak.rgb;
+
+      ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${alpha * 0.65})`;
+      ctx.lineWidth = Math.max(1, streak.sizeBase * params.global.dotScale * 0.35);
+      ctx.beginPath();
+      ctx.moveTo(tx, ty);
+      ctx.lineTo(hx, hy);
+      ctx.stroke();
+
+      const dotAlpha = alpha * (0.85 + (Math.sin(time * 0.06 + streak.twinkle) + 1) * 0.08);
+      drawDot(ctx, hx, hy, dotSize(streak.sizeBase, params, 1.1), streak.rgb, dotAlpha);
+    }
+  }
+
+  function drawGargantua(cx, cy, p, vis, speedMul) {
     const bhR = holeR * p.blackHole.radiusScale;
-
-    ctx.fillStyle = bgColor;
-    ctx.fillRect(0, 0, w, h);
-
     const tilt = p.global.diskTilt;
 
-    for (const dot of diskDots) {
-      dot.angle += DISK_SPIN_BASE * dot.spinBand * p.disk.spin;
+    if (vis.disk) {
+      for (const dot of diskDots) {
+        dot.angle += DISK_SPIN_BASE * dot.spinBand * p.disk.spin * speedMul;
+      }
     }
-    for (const dot of photonDots) {
-      dot.angle += PHOTON_SPIN_BASE * dot.spinDir * p.photon.spin;
+    if (vis.photon) {
+      for (const dot of photonDots) {
+        dot.angle += PHOTON_SPIN_BASE * dot.spinDir * p.photon.spin * speedMul;
+      }
     }
 
     const drawOrbitDots = (dots, group, frontPass, colorFn, alphaFn) => {
@@ -391,82 +535,152 @@ export function createBgPixels(canvas, viewport, initialParams = {}) {
       }
     };
 
-    drawOrbitDots(diskDots, 'disk', false, (d) => diskRgb(d.angle),
-      (d) => dopplerAlpha(d.angle) * p.disk.alpha);
-    drawOrbitDots(photonDots, 'photon', false, () => PHOTON_RGB,
-      (d) => 0.65 + (Math.sin(time * 0.08 + d.angle * 2) + 1) * 0.2);
+    if (vis.disk) {
+      drawOrbitDots(diskDots, 'disk', false, (d) => diskRgb(d.angle),
+        (d) => dopplerAlpha(d.angle) * p.disk.alpha);
+    }
+    if (vis.photon) {
+      drawOrbitDots(photonDots, 'photon', false, () => PHOTON_RGB,
+        (d) => 0.65 + (Math.sin(time * 0.08 + d.angle * 2) + 1) * 0.2);
+    }
 
-    for (const star of fieldStars) {
-      updateFieldStar(star, holeR, p);
-      const edgeR = holeR * p.blackHole.radiusScale * HOLE_EDGE_OUTER;
-      let x;
-      let y;
-      let alpha;
-      if (star.dist > edgeR * 1.08) {
-        x = cx + Math.cos(star.angle) * star.dist;
-        y = cy + Math.sin(star.angle) * star.dist;
-        const t = 1 - Math.min(1, (star.dist - edgeR) / (holeR * 2.2));
-        alpha = 0.1 + t * 0.22;
-      } else {
-        ({ x, y } = starOnBoundary(cx, cy, holeR, star, time, p));
-        alpha = 0.2 + (Math.sin(time * 0.035 + star.twinkle) + 1) * 0.14;
+    if (vis.field) {
+      for (const star of fieldStars) {
+        updateFieldStar(star, holeR, p);
+        const edgeR = holeR * p.blackHole.radiusScale * HOLE_EDGE_OUTER;
+        let x;
+        let y;
+        let alpha;
+        if (star.dist > edgeR * 1.08) {
+          x = cx + Math.cos(star.angle) * star.dist;
+          y = cy + Math.sin(star.angle) * star.dist;
+          const t = 1 - Math.min(1, (star.dist - edgeR) / (holeR * 2.2));
+          alpha = 0.1 + t * 0.22;
+        } else {
+          ({ x, y } = starOnBoundary(cx, cy, holeR, star, time, p));
+          alpha = 0.2 + (Math.sin(time * 0.035 + star.twinkle) + 1) * 0.14;
+        }
+        if (alpha < 0.06) continue;
+        drawDot(ctx, x, y, dotSize(star.sizeBase, p, p.field.dotSize), STAR_RGB, alpha);
       }
-      if (alpha < 0.06) continue;
-      drawDot(ctx, x, y, dotSize(star.sizeBase, p, p.field.dotSize), STAR_RGB, alpha);
     }
 
-    for (const arc of arcStars) {
-      arc.angle += arc.driftBase * p.arc.drift;
-      const wobble = Math.sin(time * 0.045 + arc.phase) * holeR * 0.035;
-      const r = holeR * p.blackHole.radiusScale * arc.radiusBase * p.arc.radiusScale + wobble;
-      const x = cx + Math.cos(arc.angle) * r;
-      const y = cy + Math.sin(arc.angle) * r;
-      const alpha = 0.24 + (Math.sin(time * 0.05 + arc.phase) + 1) * 0.14;
-      drawDot(ctx, x, y, dotSize(arc.sizeBase, p, p.arc.dotSize), STAR_RGB, alpha);
-    }
-
-    for (const star of inflowStars) {
-      updateInflowStar(star, holeR, time, p);
-      let x;
-      let y;
-      let alpha;
-      let rgb = STAR_RGB;
-      if (star.state === 'approach') {
-        x = cx + Math.cos(star.angle) * star.dist;
-        y = cy + Math.sin(star.angle) * star.dist;
-        const t = 1 - Math.min(1, (star.dist - holeR) / (holeR * 2.5));
-        alpha = 0.12 + t * 0.35;
-      } else if (star.state === 'slide') {
-        ({ x, y } = starOnBoundary(cx, cy, holeR, star, time, p));
-        rgb = diskRgb(star.angle);
-        alpha = dopplerAlpha(star.angle) * (0.9 + (Math.sin(time * 0.06 + star.twinkle) + 1) * 0.1);
-      } else {
-        x = cx + Math.cos(star.angle) * star.dist;
-        y = cy + Math.sin(star.angle) * star.dist;
-        const t = Math.min(1, (star.dist - holeR * p.blackHole.radiusScale * HOLE_EDGE_OUTER) / (holeR * 2));
-        alpha = 0.5 * (1 - t * 0.85);
+    if (vis.arc) {
+      for (const arc of arcStars) {
+        arc.angle += arc.driftBase * p.arc.drift * speedMul;
+        const wobble = Math.sin(time * 0.045 + arc.phase) * holeR * 0.035;
+        const r = holeR * p.blackHole.radiusScale * arc.radiusBase * p.arc.radiusScale + wobble;
+        const x = cx + Math.cos(arc.angle) * r;
+        const y = cy + Math.sin(arc.angle) * r;
+        const alpha = 0.24 + (Math.sin(time * 0.05 + arc.phase) + 1) * 0.14;
+        drawDot(ctx, x, y, dotSize(arc.sizeBase, p, p.arc.dotSize), STAR_RGB, alpha);
       }
-      if (alpha < 0.06) continue;
-      drawDot(ctx, x, y, dotSize(star.sizeBase, p, p.inflow.dotSize), rgb, alpha);
     }
 
-    for (const star of boundaryStars) {
-      star.angle += star.baseSpeed * p.boundary.speed;
-      const { x, y } = starOnBoundary(cx, cy, holeR, star, time, p);
-      const twinkle = 0.85 + (Math.sin(time * 0.04 + star.twinkle) + 1) * 0.1;
-      const alpha = dopplerAlpha(star.angle) * twinkle;
-      drawDot(ctx, x, y, dotSize(star.sizeBase, p, p.boundary.dotSize), diskRgb(star.angle), alpha);
+    if (vis.inflow) {
+      for (const star of inflowStars) {
+        updateInflowStar(star, holeR, time, p);
+        let x;
+        let y;
+        let alpha;
+        let rgb = STAR_RGB;
+        if (star.state === 'approach') {
+          x = cx + Math.cos(star.angle) * star.dist;
+          y = cy + Math.sin(star.angle) * star.dist;
+          const t = 1 - Math.min(1, (star.dist - holeR) / (holeR * 2.5));
+          alpha = 0.12 + t * 0.35;
+        } else if (star.state === 'slide') {
+          ({ x, y } = starOnBoundary(cx, cy, holeR, star, time, p));
+          rgb = diskRgb(star.angle);
+          alpha = dopplerAlpha(star.angle) * (0.9 + (Math.sin(time * 0.06 + star.twinkle) + 1) * 0.1);
+        } else {
+          x = cx + Math.cos(star.angle) * star.dist;
+          y = cy + Math.sin(star.angle) * star.dist;
+          const t = Math.min(1, (star.dist - holeR * p.blackHole.radiusScale * HOLE_EDGE_OUTER) / (holeR * 2));
+          alpha = 0.5 * (1 - t * 0.85);
+        }
+        if (alpha < 0.06) continue;
+        drawDot(ctx, x, y, dotSize(star.sizeBase, p, p.inflow.dotSize), rgb, alpha);
+      }
     }
 
-    drawBlackHole(ctx, cx, cy, bhR, bgColor);
+    if (vis.boundary) {
+      for (const star of boundaryStars) {
+        star.angle += star.baseSpeed * p.boundary.speed * speedMul;
+        const { x, y } = starOnBoundary(cx, cy, holeR, star, time, p);
+        const twinkle = 0.85 + (Math.sin(time * 0.04 + star.twinkle) + 1) * 0.1;
+        const alpha = dopplerAlpha(star.angle) * twinkle;
+        drawDot(ctx, x, y, dotSize(star.sizeBase, p, p.boundary.dotSize), diskRgb(star.angle), alpha);
+      }
+    }
 
-    drawOrbitDots(diskDots, 'disk', true, (d) => diskRgb(d.angle),
-      (d) => dopplerAlpha(d.angle) * p.disk.alpha);
-    drawOrbitDots(photonDots, 'photon', true, () => PHOTON_RGB,
-      (d) => 0.65 + (Math.sin(time * 0.08 + d.angle * 2) + 1) * 0.2);
+    if (vis.blackHole) drawBlackHole(ctx, cx, cy, bhR, bgColor);
+
+    if (vis.disk) {
+      drawOrbitDots(diskDots, 'disk', true, (d) => diskRgb(d.angle),
+        (d) => dopplerAlpha(d.angle) * p.disk.alpha);
+    }
+    if (vis.photon) {
+      drawOrbitDots(photonDots, 'photon', true, () => PHOTON_RGB,
+        (d) => 0.65 + (Math.sin(time * 0.08 + d.angle * 2) + 1) * 0.2);
+    }
+  }
+
+  function tick() {
+    if (!enabled || !visible || w <= 0 || h <= 0) return;
+
+    time += 1;
+    const p = params;
+    const vis = settings.visibility;
+    const speedMul = settings.globalSpeed;
+    const travel = settings.spaceTravel;
+
+    let cx = w * 0.5;
+    let cy = h * 0.5;
+
+    if (travel) {
+      spaceTravelPhase += 0.004 * speedMul;
+      cx += Math.sin(spaceTravelPhase * 0.7) * w * 0.012;
+      cy += Math.cos(spaceTravelPhase * 0.5) * h * 0.008;
+    }
+
+    ctx.fillStyle = bgColor;
+    ctx.fillRect(0, 0, w, h);
+
+    if (travel && vis.warp) {
+      drawWarpStreaks(cx, cy, speedMul, settings.warpIntensity);
+    }
+
+    if (!travel || vis.disk || vis.photon || vis.boundary || vis.inflow || vis.field || vis.arc || vis.blackHole) {
+      const travelScale = travel ? 0.55 : 1;
+      const travelCx = cx;
+      const travelCy = cy;
+      const travelBh = travel && vis.blackHole;
+      drawGargantua(
+        travelCx,
+        travelCy,
+        travelBh
+          ? { ...p, blackHole: { radiusScale: p.blackHole.radiusScale * travelScale } }
+          : p,
+        vis,
+        speedMul,
+      );
+    }
   }
 
   resize();
 
-  return { tick, resize, setColor, setEnabled, getParams, setParams };
+  return {
+    tick,
+    resize,
+    setColor,
+    setEnabled,
+    getParams,
+    setParams,
+    getSettings,
+    setSettings,
+    saveAll,
+    loadSaved,
+    setOnSpaceTravelChange,
+  };
 }

@@ -1,6 +1,7 @@
-/** Bottom dock icon buttons + popup panels for chat and black-hole background. */
+/** Bottom dock icon buttons + popup panels for chat, background, and settings. */
 
 import { initBgPixelsUI } from './bg-pixels-ui.js';
+import { initBgSettingsUI } from './bg-settings-ui.js';
 
 function closePopup(popup, btn) {
   popup?.classList.add('hidden');
@@ -15,22 +16,60 @@ function openPopup(popup, btn) {
 }
 
 /**
- * @param {{ bgPixels: object, chatApi?: { setExpanded: Function, getExpanded: Function } | null }} opts
+ * @param {{
+ *   bgPixels: object,
+ *   chatApi?: { setExpanded: Function, getExpanded: Function } | null,
+ *   t?: Function,
+ *   showToast?: Function,
+ *   onSpaceTravelChange?: Function,
+ * }} opts
  */
-export function initViewportDock({ bgPixels, chatApi = null }) {
+export function initViewportDock({
+  bgPixels,
+  chatApi = null,
+  t = (key) => key,
+  showToast = () => {},
+  onSpaceTravelChange = () => {},
+}) {
   const chatBtn = document.getElementById('dock-chat-btn');
   const bgBtn = document.getElementById('dock-bg-btn');
+  const settingsBtn = document.getElementById('dock-settings-btn');
   const chatPopup = document.getElementById('dock-chat-popup');
   const bgPopup = document.getElementById('dock-bg-popup');
+  const settingsPopup = document.getElementById('dock-settings-popup');
 
   const bgMount = document.getElementById('bg-pixels-controls');
+  const settingsMount = document.getElementById('bg-settings-controls');
+
+  let bgUi = null;
+  let settingsUi = null;
+
   if (bgMount && bgPixels?.getParams) {
-    initBgPixelsUI(bgMount, bgPixels);
+    bgUi = initBgPixelsUI(bgMount, bgPixels, {
+      t,
+      onSave: (ok) => {
+        showToast(ok ? t('bgSaveOk') : t('bgSaveFail'), ok ? 'success' : 'error');
+      },
+    });
   }
+
+  if (settingsMount && bgPixels?.getSettings) {
+    settingsUi = initBgSettingsUI(settingsMount, bgPixels, {
+      t,
+      onSpaceTravelToggle: onSpaceTravelChange,
+      onParamsSync: () => bgUi?.syncFromParams?.(),
+    });
+  }
+
+  bgPixels?.setOnSpaceTravelChange?.((on) => {
+    onSpaceTravelChange(on);
+    settingsUi?.syncFromSettings?.();
+  });
 
   const popups = [
     { popup: chatPopup, btn: chatBtn, id: 'chat' },
     { popup: bgPopup, btn: bgBtn, id: 'bg' },
+    { popup: settingsPopup, btn: settingsBtn, id: 'settings' },
   ];
 
   function closeAll(exceptId) {
@@ -63,6 +102,14 @@ export function initViewportDock({ bgPixels, chatApi = null }) {
     else closePopup(bgPopup, bgBtn);
   });
 
+  settingsBtn?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const open = settingsPopup?.classList.contains('hidden');
+    closeAll(open ? 'settings' : null);
+    if (open) openPopup(settingsPopup, settingsBtn);
+    else closePopup(settingsPopup, settingsBtn);
+  });
+
   for (const { popup } of popups) {
     popup?.querySelector('.dock-popup-close')?.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -73,7 +120,7 @@ export function initViewportDock({ bgPixels, chatApi = null }) {
 
   document.addEventListener('click', (e) => {
     const t = e.target;
-    if (t instanceof Element && t.closest('.viewport-dock, .dock-popup')) return;
+    if (t instanceof Element && t.closest('.viewport-dock, .dock-popup, .space-travel-exit')) return;
     closeAll();
     chatApi?.setExpanded?.(false);
   });
@@ -87,5 +134,5 @@ export function initViewportDock({ bgPixels, chatApi = null }) {
   dock?.addEventListener('pointerdown', (e) => e.stopPropagation());
   dock?.addEventListener('click', (e) => e.stopPropagation());
 
-  return { closeAll };
+  return { closeAll, syncSettings: () => settingsUi?.syncFromSettings?.() };
 }

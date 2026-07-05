@@ -32,6 +32,40 @@ html, body {
   height: 100vh;
 }
 
+#app.space-travel-mode .sidebar {
+  display: none;
+}
+
+#app.space-travel-mode main.viewport {
+  width: 100%;
+}
+
+.space-travel-exit {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 20;
+  padding: 8px 14px;
+  font-size: 0.78rem;
+  font-family: inherit;
+  color: var(--text);
+  background: rgba(15, 17, 23, 0.82);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+  pointer-events: auto;
+}
+
+.space-travel-exit:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.space-travel-exit.hidden {
+  display: none;
+}
+
 /* Sidebar */
 .sidebar {
   width: var(--sidebar-width);
