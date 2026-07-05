@@ -21,14 +21,13 @@
 <body>
   <div id="app">
     <aside class="sidebar-dock" id="sidebar-dock" aria-label="Main tools">
-      <div class="sidebar-dock-brand" title="3D Viewer">
-        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
-          <path d="M12 2L2 7l10 5 10-5-10-5z"/>
-          <path d="M2 17l10 5 10-5"/>
-          <path d="M2 12l10 5 10-5"/>
+      <button type="button" id="sidebar-brand-btn" class="sidebar-dock-brand" data-i18n="brandRefreshTitle" data-i18n-title="brandRefreshTitle" title="새로고침">
+        <svg class="brand-refresh-icon" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M21 12a9 9 0 1 1-2.64-6.36"/>
+          <polyline points="21 3 21 9 15 9"/>
         </svg>
         <span id="app-version" class="app-version sidebar-version"></span>
-      </div>
+      </button>
       <nav class="sidebar-dock-list">
         <button type="button" id="sidebar-file-btn" class="dock-tab" aria-label="파일" aria-expanded="false" aria-controls="sidebar-file-popup" title="파일">
           <span class="dock-tab-thumb">
@@ -589,7 +588,7 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/occt-import-js@0.0.23/dist/occt-import-js.js"></script>
-  <script type="module" src="i18n-boot.js?v=2.10.0"></script>
-  <script type="module" src="app.js?v=2.10.0"></script>
+  <script type="module" src="i18n-boot.js?v=2.10.1"></script>
+  <script type="module" src="app.js?v=2.10.1"></script>
 </body>
 </html>

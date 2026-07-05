@@ -199,6 +199,17 @@ export function initSidebarDock(opts = {}) {
   dock?.addEventListener('pointerdown', (e) => e.stopPropagation());
   dock?.addEventListener('click', (e) => e.stopPropagation());
 
+  const brandBtn = document.getElementById('sidebar-brand-btn');
+  const brandIcon = brandBtn?.querySelector('.brand-refresh-icon');
+  brandBtn?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    closeAll();
+    chatApi?.setExpanded?.(false);
+    brandIcon?.classList.add('spin-once');
+    brandBtn.disabled = true;
+    window.setTimeout(() => window.location.reload(), 320);
+  });
+
   function setTreeSectionVisible(visible) {
     const section = document.getElementById('model-tree-section');
     section?.classList.toggle('hidden', !visible);

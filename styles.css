@@ -88,8 +88,41 @@ html, body {
   gap: 4px;
   padding: 14px 8px 10px;
   color: var(--accent);
+  border: none;
   border-bottom: 1px solid var(--border);
+  background: transparent;
   width: 100%;
+  cursor: pointer;
+  font-family: var(--font);
+  transition: background 0.15s;
+}
+
+.sidebar-dock-brand:hover {
+  background: rgba(79, 143, 247, 0.08);
+}
+
+.sidebar-dock-brand:active .brand-refresh-icon {
+  animation-duration: 0.45s;
+}
+
+.brand-refresh-icon {
+  display: block;
+  animation: brand-icon-spin 2.8s linear infinite;
+  transform-origin: center;
+}
+
+.brand-refresh-icon.spin-once {
+  animation: brand-icon-spin-once 0.5s ease-in-out;
+}
+
+@keyframes brand-icon-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes brand-icon-spin-once {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 .sidebar-version {
