@@ -10,8 +10,8 @@ import { PLYExporter } from 'three/addons/exporters/PLYExporter.js';
 import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
 import { SimplifyModifier } from 'three/addons/modifiers/SimplifyModifier.js';
 import { generateThreeViewDXF } from './drawing-export.js?v=2.4.1';
-import { t, getLanguage } from './i18n.js?v=2.7.2';
-import { initVisitorChat } from './visitor-chat.js?v=2.7.2';
+import { t, getLanguage } from './i18n.js?v=2.7.3';
+import { initVisitorChat } from './visitor-chat.js?v=2.7.3';
 import { initViewerFeatures } from './viewer-features.js?v=2.6.12';
 import { initRecentFiles, saveRecentFile } from './recent-files.js?v=2.4.1';
 import { initModelTabs, captureModelThumbnail } from './model-tabs.js?v=2.6.1';
@@ -40,8 +40,8 @@ import {
   getConvertBackendsForExt,
 } from './cad-step-convert.js?v=2.5.0';
 import { isStaticWebDeployment } from './web-config.js?v=2.5.0';
-import { createBgPixels, loadBgFromStorage } from './bg-pixels.js?v=2.7.2';
-import { initViewportDock } from './viewport-dock.js?v=2.7.2';
+import { createBgPixels, loadBgFromStorage } from './bg-pixels.js?v=2.7.3';
+import { initViewportDock } from './viewport-dock.js?v=2.7.3';
 import { initColorPicker } from './color-picker.js?v=2.6.7';
 
 let cad2dModule = null;
@@ -188,6 +188,7 @@ const bgPixels = createBgPixels(
 const viewportEl = canvas.parentElement;
 const appEl = document.getElementById('app');
 const spaceTravelExitBtn = document.getElementById('space-travel-exit');
+let viewportDockApi = null;
 
 function applySpaceTravelMode(on) {
   appEl?.classList.toggle('space-travel-mode', on);
@@ -205,9 +206,15 @@ applySpaceTravelMode(bgPixels.getSettings().spaceTravel);
 spaceTravelExitBtn?.addEventListener('click', () => setSpaceTravelMode(false));
 
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && bgPixels.getSettings().spaceTravel) {
-    setSpaceTravelMode(false);
+  if (e.key !== 'Escape') return;
+  const chatOpen = document.getElementById('dock-chat-popup')?.classList.contains('hidden') === false;
+  const bgOpen = document.getElementById('dock-bg-popup')?.classList.contains('hidden') === false;
+  const settingsOpen = document.getElementById('dock-settings-popup')?.classList.contains('hidden') === false;
+  if (chatOpen || bgOpen || settingsOpen) {
+    viewportDockApi?.closeAll?.();
+    return;
   }
+  if (bgPixels.getSettings().spaceTravel) setSpaceTravelMode(false);
 });
 const bgColorInput = document.getElementById('bg-color');
 if (bgColorInput?.value) bgPixels.setColor(bgColorInput.value);
@@ -548,7 +555,7 @@ async function init() {
     getFilenameBase: getBaseFilename,
   });
   const chatApi = await initVisitorChat({ t, showToast, getLang: getLanguage });
-  initViewportDock({
+  viewportDockApi = initViewportDock({
     bgPixels,
     chatApi,
     t,

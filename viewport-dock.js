@@ -106,8 +106,12 @@ export function initViewportDock({
     e.stopPropagation();
     const open = settingsPopup?.classList.contains('hidden');
     closeAll(open ? 'settings' : null);
-    if (open) openPopup(settingsPopup, settingsBtn);
-    else closePopup(settingsPopup, settingsBtn);
+    if (open) {
+      openPopup(settingsPopup, settingsBtn);
+      settingsUi?.syncFromSettings?.();
+    } else {
+      closePopup(settingsPopup, settingsBtn);
+    }
   });
 
   for (const { popup } of popups) {

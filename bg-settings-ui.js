@@ -46,7 +46,7 @@ const PRESETS = [
       field: { count: 8 },
       arc: { count: 10 },
     },
-    settings: { globalSpeed: 0.7, warpIntensity: 0.8 },
+    settings: { globalSpeed: 0.7, warpIntensity: 0.8, spaceTravel: false },
   },
   {
     id: 'travel',
@@ -200,7 +200,6 @@ export function initBgSettingsUI(container, bgPixels, opts = {}) {
 
   travelInput?.addEventListener('change', () => {
     bgPixels.setSettings({ spaceTravel: travelInput.checked });
-    opts.onSpaceTravelToggle?.(travelInput.checked);
     emitChange();
   });
 
@@ -245,12 +244,6 @@ export function initBgSettingsUI(container, bgPixels, opts = {}) {
         ? { ...DEFAULT_BG_SETTINGS.visibility, ...preset.settings.visibility }
         : undefined,
     });
-
-    if (preset.settings.spaceTravel) {
-      opts.onSpaceTravelToggle?.(true);
-    } else if (bgPixels.getSettings().spaceTravel === false) {
-      opts.onSpaceTravelToggle?.(false);
-    }
 
     syncFromSettings();
     opts.onParamsSync?.();
