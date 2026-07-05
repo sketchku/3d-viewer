@@ -10,8 +10,8 @@ import { PLYExporter } from 'three/addons/exporters/PLYExporter.js';
 import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
 import { SimplifyModifier } from 'three/addons/modifiers/SimplifyModifier.js';
 import { generateThreeViewDXF } from './drawing-export.js?v=2.4.1';
-import { t, getLanguage } from './i18n.js?v=2.7.6';
-import { initVisitorChat } from './visitor-chat.js?v=2.7.6';
+import { t, getLanguage } from './i18n.js?v=2.7.7';
+import { initVisitorChat } from './visitor-chat.js?v=2.7.7';
 import { initViewerFeatures } from './viewer-features.js?v=2.6.12';
 import { initRecentFiles, saveRecentFile } from './recent-files.js?v=2.4.1';
 import { initModelTabs, captureModelThumbnail } from './model-tabs.js?v=2.6.1';
@@ -40,8 +40,8 @@ import {
   getConvertBackendsForExt,
 } from './cad-step-convert.js?v=2.5.0';
 import { isStaticWebDeployment } from './web-config.js?v=2.5.0';
-import { createBgPixels, loadBgFromStorage } from './bg-pixels.js?v=2.7.6';
-import { initViewportDock } from './viewport-dock.js?v=2.7.6';
+import { createBgPixels, loadBgFromStorage } from './bg-pixels.js?v=2.7.7';
+import { initViewportDock } from './viewport-dock.js?v=2.7.7';
 import { initColorPicker } from './color-picker.js?v=2.6.7';
 
 let cad2dModule = null;
@@ -297,6 +297,8 @@ let occt = null;
 let defaultMaterial = null;
 let autoRotate = false;
 let showCadText = true;
+let showEmptyLoadHint = true;
+let showModelRemoveBtn = true;
 const AUTO_ROTATE_SPEED = 1.5;
 let initialCameraState = null;
 let currentFile = null; // { name, ext, buffer: ArrayBuffer }
@@ -396,7 +398,7 @@ function applyModelTabSession(session) {
   fileNameEl.textContent = currentFile.name;
   fileFormatEl.textContent = SUPPORTED_FORMATS[currentFile.ext] || currentFile.ext.toUpperCase();
   fileInfo.classList.remove('hidden');
-  emptyState.classList.add('hidden');
+  updateEmptyStateVisibility();
   btnSaveAs.disabled = false;
   btnExport.disabled = is2d;
   btnDrawing.disabled = is2d;
@@ -413,7 +415,7 @@ function applyMultiModelActive(entry) {
     btnExport.disabled = true;
     btnDrawing.disabled = true;
     fileInfo.classList.add('hidden');
-    if (modelGroup.children.length === 0) emptyState.classList.remove('hidden');
+    updateEmptyStateVisibility();
     partTreeMgr?.clear();
     viewerFeatures?.onModelCleared();
     return;
@@ -425,7 +427,7 @@ function applyMultiModelActive(entry) {
   fileNameEl.textContent = entry.name;
   fileFormatEl.textContent = SUPPORTED_FORMATS[entry.ext] || entry.ext.toUpperCase();
   fileInfo.classList.remove('hidden');
-  emptyState.classList.add('hidden');
+  updateEmptyStateVisibility();
   btnSaveAs.disabled = false;
   btnExport.disabled = entry.is2d;
   btnDrawing.disabled = entry.is2d;
@@ -517,6 +519,7 @@ async function init() {
     t,
     THREE,
     modelGroup,
+    getShowRemoveButtons: () => showModelRemoveBtn,
     onActiveChange: applyMultiModelActive,
     onLayoutChange: () => fitToView(),
   });
@@ -692,6 +695,19 @@ async function applyCadTextVisibility(show = showCadText) {
   cad2d.setCadTextVisible(modelGroup, show);
 }
 
+function isViewportEmpty() {
+  return modelGroup.children.length === 0;
+}
+
+function updateEmptyStateVisibility() {
+  if (!emptyState) return;
+  if (!isViewportEmpty()) {
+    emptyState.classList.add('hidden');
+    return;
+  }
+  emptyState.classList.toggle('hidden', !showEmptyLoadHint);
+}
+
 function getModelColor() {
   return document.getElementById('model-color')?.value || '#6b9bd1';
 }
@@ -822,6 +838,14 @@ function setupUI() {
   document.getElementById('toggle-cad-text')?.addEventListener('change', (e) => {
     showCadText = e.target.checked;
     applyCadTextVisibility(showCadText);
+  });
+  document.getElementById('toggle-empty-hint')?.addEventListener('change', (e) => {
+    showEmptyLoadHint = e.target.checked;
+    updateEmptyStateVisibility();
+  });
+  document.getElementById('toggle-model-remove')?.addEventListener('change', (e) => {
+    showModelRemoveBtn = e.target.checked;
+    multiModelMgr?.refreshList?.();
   });
   document.getElementById('toggle-auto-rotate').addEventListener('change', (e) => {
     autoRotate = e.target.checked;
@@ -1075,7 +1099,7 @@ async function loadFile(file, options = {}) {
         ? t('convertedFromFormat', { format: 'STEP', ext: options.originalExt })
         : SUPPORTED_FORMATS[ext];
       fileInfo.classList.remove('hidden');
-      emptyState.classList.add('hidden');
+      updateEmptyStateVisibility();
       modelTabsMgr?.registerLoaded();
       viewerFeatures?.onModelLoaded();
       partTreeMgr?.refresh(is2d ? 'layers' : 'parts');
@@ -1106,7 +1130,7 @@ async function loadFile(file, options = {}) {
       btnExport.disabled = true;
       btnDrawing.disabled = true;
       fileInfo.classList.add('hidden');
-      emptyState.classList.remove('hidden');
+      updateEmptyStateVisibility();
       document.getElementById('btn-add-model')?.classList.add('hidden');
       showToast(t('loadingCancelled'), 'info');
       return;
@@ -1120,7 +1144,7 @@ async function loadFile(file, options = {}) {
       btnExport.disabled = true;
       btnDrawing.disabled = true;
       fileInfo.classList.add('hidden');
-      emptyState.classList.remove('hidden');
+      updateEmptyStateVisibility();
     }
     showAlert(t('loadFailed'), err.message || t('unknownError'));
   } finally {

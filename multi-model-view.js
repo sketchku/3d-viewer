@@ -26,6 +26,7 @@ export function initMultiModelView({
   t,
   THREE,
   modelGroup,
+  getShowRemoveButtons = () => true,
   onActiveChange,
   onLayoutChange,
 }) {
@@ -116,7 +117,8 @@ export function initMultiModelView({
         removeEntry(entry.id);
       });
 
-      row.append(visBtn, label, removeBtn);
+      row.append(visBtn, label);
+      if (getShowRemoveButtons()) row.append(removeBtn);
       list.appendChild(row);
     }
   }
@@ -202,6 +204,7 @@ export function initMultiModelView({
     setActive,
     clear,
     layout,
+    refreshList: renderList,
     hasMultiple,
     getActiveEntry,
     getVisibleEntries,
