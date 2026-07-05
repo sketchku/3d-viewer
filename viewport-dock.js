@@ -2,27 +2,16 @@
 
 import { initBgPixelsUI } from './bg-pixels-ui.js';
 
-const CHAT_ICON = `<svg class="dock-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-  <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
-</svg>`;
-
-const BLACKHOLE_ICON = `<svg class="dock-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-  <circle cx="12" cy="12" r="3.5" fill="currentColor"/>
-  <ellipse cx="12" cy="12" rx="9.5" ry="2.8" stroke="currentColor" stroke-width="1.6" transform="rotate(-22 12 12)"/>
-  <ellipse cx="12" cy="12" rx="8.5" ry="2.2" stroke="currentColor" stroke-width="1" opacity="0.45" transform="rotate(24 12 12)"/>
-  <path d="M5.5 9.5 Q12 6.5 18.5 9.5" stroke="currentColor" stroke-width="1" opacity="0.35" fill="none"/>
-</svg>`;
-
 function closePopup(popup, btn) {
   popup?.classList.add('hidden');
   btn?.setAttribute('aria-expanded', 'false');
-  btn?.classList.remove('dock-icon-btn-active');
+  btn?.classList.remove('active');
 }
 
 function openPopup(popup, btn) {
   popup?.classList.remove('hidden');
   btn?.setAttribute('aria-expanded', 'true');
-  btn?.classList.add('dock-icon-btn-active');
+  btn?.classList.add('active');
 }
 
 /**
@@ -33,13 +22,6 @@ export function initViewportDock({ bgPixels, chatApi = null }) {
   const bgBtn = document.getElementById('dock-bg-btn');
   const chatPopup = document.getElementById('dock-chat-popup');
   const bgPopup = document.getElementById('dock-bg-popup');
-
-  if (chatBtn && !chatBtn.querySelector('.dock-icon')) {
-    chatBtn.insertAdjacentHTML('afterbegin', CHAT_ICON);
-  }
-  if (bgBtn && !bgBtn.querySelector('.dock-icon')) {
-    bgBtn.insertAdjacentHTML('afterbegin', BLACKHOLE_ICON);
-  }
 
   const bgMount = document.getElementById('bg-pixels-controls');
   if (bgMount && bgPixels?.getParams) {

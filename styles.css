@@ -1043,64 +1043,108 @@ html, body {
   height: 100%;
 }
 
-/* Viewport dock — chat & black-hole icon buttons */
+/* Viewport dock (bottom) — mirrors model-tabs (top) */
 .viewport-dock {
   position: absolute;
-  left: 50%;
-  bottom: 14px;
-  transform: translateX(-50%);
+  bottom: 10px;
+  left: 12px;
+  right: 12px;
   z-index: 14;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 6px 10px;
-  background: rgba(15, 17, 23, 0.88);
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  backdrop-filter: blur(10px);
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
   pointer-events: auto;
 }
 
-.dock-icon-btn {
+.viewport-dock-list {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 6px;
+  width: 100%;
+  padding: 4px 6px;
+  background: rgba(15, 17, 23, 0.88);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.28);
+  box-sizing: border-box;
+}
+
+.dock-tab {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  width: 52px;
+  padding: 3px 2px 4px;
+  background: transparent;
+  border: 2px solid transparent;
+  border-radius: 10px;
+  cursor: pointer;
+  font-family: var(--font);
+  color: inherit;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.dock-tab:hover {
+  background: rgba(79, 143, 247, 0.08);
+}
+
+.dock-tab.active,
+.dock-tab[aria-expanded="true"] {
+  border-color: var(--accent);
+  background: rgba(79, 143, 247, 0.14);
+}
+
+.dock-tab-thumb {
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
-  padding: 0;
-  border: 1px solid transparent;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.04);
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  background: var(--bg-dark);
+  border: 1px solid var(--border);
   color: var(--text-muted);
-  cursor: pointer;
-  transition: border-color 0.15s, color 0.15s, background 0.15s, transform 0.12s;
-  font-family: var(--font);
 }
 
-.dock-icon-btn:hover {
+.dock-tab:hover .dock-tab-thumb {
   color: var(--text);
-  border-color: var(--border);
-  background: rgba(79, 143, 247, 0.1);
+  border-color: rgba(79, 143, 247, 0.35);
 }
 
-.dock-icon-btn-active,
-.dock-icon-btn[aria-expanded="true"] {
+.dock-tab.active .dock-tab-thumb,
+.dock-tab[aria-expanded="true"] .dock-tab-thumb {
   color: var(--accent);
-  border-color: rgba(79, 143, 247, 0.55);
-  background: rgba(79, 143, 247, 0.16);
+  border-color: rgba(79, 143, 247, 0.45);
+  background: rgba(79, 143, 247, 0.12);
 }
 
-.dock-icon {
+.dock-tab-icon {
   display: block;
   flex-shrink: 0;
 }
 
+.dock-tab-label {
+  max-width: 48px;
+  font-size: 0.58rem;
+  line-height: 1.1;
+  color: var(--text-muted);
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dock-tab.active .dock-tab-label,
+.dock-tab[aria-expanded="true"] .dock-tab-label {
+  color: var(--accent);
+}
+
 .dock-badge {
   position: absolute;
-  top: -2px;
-  right: -2px;
+  top: -4px;
+  right: -4px;
   min-width: 1.1rem;
   height: 1.1rem;
   padding: 0 4px;
@@ -1124,7 +1168,7 @@ html, body {
   position: absolute;
   left: 12px;
   right: 12px;
-  bottom: 68px;
+  bottom: 86px;
   z-index: 13;
   max-height: min(420px, 52vh);
   display: flex;

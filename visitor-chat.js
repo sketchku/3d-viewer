@@ -302,7 +302,7 @@ export async function initVisitorChat({ t, showToast, getLang }) {
     popup.classList.toggle('hidden', !open);
     const dockBtn = document.getElementById('dock-chat-btn');
     dockBtn?.setAttribute('aria-expanded', open ? 'true' : 'false');
-    dockBtn?.classList.toggle('dock-icon-btn-active', open);
+    dockBtn?.classList.toggle('active', open);
   }
 
   function setSending(active) {
