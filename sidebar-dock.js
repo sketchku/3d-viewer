@@ -1,4 +1,6 @@
-/** Left sidebar icon rail + popup panels (mirrors viewport-dock pattern). */
+/** Left sidebar icon rail + popup panels. */
+
+import { initLabFeatures } from './viewport-dock.js';
 
 function closePopup(popup, btn) {
   popup?.classList.add('hidden');
@@ -86,18 +88,32 @@ function initPopupDrag(popup, container) {
 }
 
 /**
- * @param {{ onTreeVisibility?: (visible: boolean) => void }} [opts]
+ * @param {{
+ *   bgPixels?: object,
+ *   chatApi?: { setExpanded: Function, getExpanded: Function } | null,
+ *   t?: Function,
+ *   showToast?: Function,
+ *   onSpaceTravelChange?: Function,
+ * }} [opts]
  */
 export function initSidebarDock(opts = {}) {
+  const {
+    bgPixels = null,
+    chatApi = null,
+    t = (key) => key,
+    showToast = () => {},
+    onSpaceTravelChange = () => {},
+  } = opts;
+
   const app = document.getElementById('app');
   const dock = document.getElementById('sidebar-dock');
   const pairs = [
     { id: 'file', btn: 'sidebar-file-btn', popup: 'sidebar-file-popup' },
-    { id: 'view', btn: 'sidebar-view-btn', popup: 'sidebar-view-popup' },
-    { id: 'tools', btn: 'sidebar-tools-btn', popup: 'sidebar-tools-popup' },
-    { id: 'tree', btn: 'sidebar-tree-btn', popup: 'sidebar-tree-popup' },
-    { id: 'info', btn: 'sidebar-info-btn', popup: 'sidebar-info-popup' },
-    { id: 'lang', btn: 'sidebar-lang-btn', popup: 'sidebar-lang-popup' },
+    { id: 'display', btn: 'sidebar-display-btn', popup: 'sidebar-display-popup' },
+    { id: 'analyze', btn: 'sidebar-analyze-btn', popup: 'sidebar-analyze-popup' },
+    { id: 'model', btn: 'sidebar-model-btn', popup: 'sidebar-model-popup' },
+    { id: 'settings', btn: 'sidebar-settings-btn', popup: 'sidebar-settings-popup' },
+    { id: 'lab', btn: 'sidebar-lab-btn', popup: 'sidebar-lab-popup' },
   ];
 
   const popups = pairs.map(({ id, btn, popup }) => ({
@@ -105,6 +121,11 @@ export function initSidebarDock(opts = {}) {
     btn: document.getElementById(btn),
     popup: document.getElementById(popup),
   }));
+
+  let labApi = null;
+  if (bgPixels) {
+    labApi = initLabFeatures({ bgPixels, t, showToast, onSpaceTravelChange });
+  }
 
   for (const { popup } of popups) {
     initPopupDrag(popup, app);
@@ -114,6 +135,7 @@ export function initSidebarDock(opts = {}) {
     for (const { popup, btn, id } of popups) {
       if (id === exceptId) continue;
       closePopup(popup, btn);
+      if (id === 'lab' && chatApi?.setExpanded) chatApi.setExpanded(false);
     }
   }
 
@@ -121,9 +143,34 @@ export function initSidebarDock(opts = {}) {
     return popups.some(({ popup }) => popup && !popup.classList.contains('hidden'));
   }
 
+  function openById(id) {
+    const entry = popups.find((p) => p.id === id);
+    if (!entry?.popup || !entry.btn) return;
+    closeAll(id);
+    openPopup(entry.popup, entry.btn);
+    if (id === 'lab') {
+      labApi?.syncSettings?.();
+      chatApi?.setExpanded?.(true);
+    }
+  }
+
   for (const { popup, btn, id } of popups) {
     btn?.addEventListener('click', (e) => {
       e.stopPropagation();
+      if (id === 'lab') {
+        const isOpen = chatApi?.getExpanded?.() ?? !popup?.classList.contains('hidden');
+        const willOpen = !isOpen;
+        closeAll(willOpen ? 'lab' : null);
+        if (chatApi?.setExpanded) {
+          chatApi.setExpanded(willOpen);
+        } else if (willOpen) {
+          openPopup(popup, btn);
+          labApi?.syncSettings?.();
+        } else {
+          closePopup(popup, btn);
+        }
+        return;
+      }
       const open = popup?.classList.contains('hidden');
       closeAll(open ? id : null);
       if (open) openPopup(popup, btn);
@@ -133,13 +180,15 @@ export function initSidebarDock(opts = {}) {
     popup?.querySelector('.dock-popup-close')?.addEventListener('click', (e) => {
       e.stopPropagation();
       closeAll();
+      chatApi?.setExpanded?.(false);
     });
   }
 
   document.addEventListener('click', (e) => {
-    const t = e.target;
-    if (t instanceof Element && t.closest('.sidebar-dock, .sidebar-popup')) return;
+    const target = e.target;
+    if (target instanceof Element && target.closest('.sidebar-dock, .sidebar-popup, .space-travel-exit')) return;
     closeAll();
+    chatApi?.setExpanded?.(false);
   });
 
   for (const { popup } of popups) {
@@ -150,15 +199,16 @@ export function initSidebarDock(opts = {}) {
   dock?.addEventListener('pointerdown', (e) => e.stopPropagation());
   dock?.addEventListener('click', (e) => e.stopPropagation());
 
-  function setTreeButtonVisible(visible) {
-    const treeBtn = document.getElementById('sidebar-tree-btn');
-    treeBtn?.classList.toggle('hidden', !visible);
-    opts.onTreeVisibility?.(visible);
+  function setTreeSectionVisible(visible) {
+    const section = document.getElementById('model-tree-section');
+    section?.classList.toggle('hidden', !visible);
     if (!visible) {
-      const entry = popups.find((p) => p.id === 'tree');
-      closePopup(entry?.popup, entry?.btn);
+      const entry = popups.find((p) => p.id === 'model');
+      if (entry?.popup && !entry.popup.classList.contains('hidden')) {
+        // keep model popup open, just hide tree section
+      }
     }
   }
 
-  return { closeAll, isAnyOpen, setTreeButtonVisible };
+  return { closeAll, isAnyOpen, openById, setTreeButtonVisible: setTreeSectionVisible, syncLabSettings: () => labApi?.syncSettings?.() };
 }

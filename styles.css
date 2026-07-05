@@ -1376,6 +1376,56 @@ html, body {
   width: 100%;
 }
 
+.dock-popup-section-title {
+  margin: 12px 0 8px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.dock-popup-section-title:first-child {
+  margin-top: 0;
+}
+
+.dock-popup-lab-note {
+  margin: 12px 0 0;
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+.dock-tab-lab .dock-tab-thumb {
+  border-color: rgba(168, 130, 255, 0.35);
+}
+
+.dock-tab-lab:hover .dock-tab-thumb,
+.dock-tab-lab.active .dock-tab-thumb,
+.dock-tab-lab[aria-expanded="true"] .dock-tab-thumb {
+  color: #c4a8ff;
+  border-color: rgba(168, 130, 255, 0.5);
+}
+
+.dock-tab-lab.active .dock-tab-label,
+.dock-tab-lab[aria-expanded="true"] .dock-tab-label {
+  color: #c4a8ff;
+}
+
+.sidebar-lab-body {
+  padding: 12px 14px 16px;
+}
+
+.sidebar-lab-body .visitor-chat-panel {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin-bottom: 4px;
+}
+
+.lab-section-mount .bg-pixels-panel {
+  padding: 8px 0 12px;
+}
+
 /* Sidebar popups (left rail) — after .dock-popup to override position */
 .sidebar-popup.dock-popup {
   left: calc(var(--sidebar-width) + 10px);

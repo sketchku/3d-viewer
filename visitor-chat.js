@@ -206,7 +206,7 @@ async function createStore() {
 }
 
 export async function initVisitorChat({ t, showToast, getLang }) {
-  const popup = document.getElementById('dock-chat-popup');
+  const popup = document.getElementById('sidebar-lab-popup');
   const messagesEl = document.getElementById('visitor-chat-messages');
   const form = document.getElementById('visitor-chat-form');
   const nameInput = document.getElementById('visitor-chat-name');
@@ -299,10 +299,21 @@ export async function initVisitorChat({ t, showToast, getLang }) {
 
   function setExpanded(open) {
     expanded = open;
-    popup.classList.toggle('hidden', !open);
-    const dockBtn = document.getElementById('dock-chat-btn');
+    popup?.classList.toggle('hidden', !open);
+    const dockBtn = document.getElementById('sidebar-lab-btn');
     dockBtn?.setAttribute('aria-expanded', open ? 'true' : 'false');
     dockBtn?.classList.toggle('active', open);
+    if (open) {
+      document.querySelectorAll('.sidebar-popup').forEach((el) => {
+        if (el !== popup) el.classList.add('hidden');
+      });
+      document.querySelectorAll('.sidebar-dock .dock-tab').forEach((btn) => {
+        if (btn !== dockBtn) {
+          btn.setAttribute('aria-expanded', 'false');
+          btn.classList.remove('active');
+        }
+      });
+    }
   }
 
   function setSending(active) {

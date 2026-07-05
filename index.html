@@ -30,7 +30,7 @@
         <span id="app-version" class="app-version sidebar-version"></span>
       </div>
       <nav class="sidebar-dock-list">
-        <button type="button" id="sidebar-file-btn" class="dock-tab" aria-label="파일 열기" aria-expanded="false" aria-controls="sidebar-file-popup" title="파일 열기">
+        <button type="button" id="sidebar-file-btn" class="dock-tab" aria-label="파일" aria-expanded="false" aria-controls="sidebar-file-popup" title="파일">
           <span class="dock-tab-thumb">
             <svg class="dock-tab-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
               <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
@@ -38,56 +38,52 @@
           </span>
           <span class="dock-tab-label" data-i18n="fileDockLabel">파일</span>
         </button>
-        <button type="button" id="sidebar-view-btn" class="dock-tab" aria-label="뷰 설정" aria-expanded="false" aria-controls="sidebar-view-popup" title="뷰 설정">
+        <button type="button" id="sidebar-display-btn" class="dock-tab" aria-label="보기" aria-expanded="false" aria-controls="sidebar-display-popup" title="보기">
+          <span class="dock-tab-thumb">
+            <svg class="dock-tab-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+              <circle cx="12" cy="12" r="3"/>
+            </svg>
+          </span>
+          <span class="dock-tab-label" data-i18n="displayDockLabel">보기</span>
+        </button>
+        <button type="button" id="sidebar-analyze-btn" class="dock-tab" aria-label="분석" aria-expanded="false" aria-controls="sidebar-analyze-popup" title="분석">
+          <span class="dock-tab-thumb">
+            <svg class="dock-tab-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+              <path d="M2 12h4l3-9 4 18 3-9h5"/>
+            </svg>
+          </span>
+          <span class="dock-tab-label" data-i18n="analyzeDockLabel">분석</span>
+        </button>
+        <button type="button" id="sidebar-model-btn" class="dock-tab" aria-label="모델" aria-expanded="false" aria-controls="sidebar-model-popup" title="모델">
+          <span class="dock-tab-thumb">
+            <svg class="dock-tab-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+              <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+            </svg>
+          </span>
+          <span class="dock-tab-label" data-i18n="modelDockLabel">모델</span>
+        </button>
+        <button type="button" id="sidebar-settings-btn" class="dock-tab" aria-label="설정" aria-expanded="false" aria-controls="sidebar-settings-popup" title="설정">
           <span class="dock-tab-thumb">
             <svg class="dock-tab-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
               <circle cx="12" cy="12" r="3"/>
               <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
             </svg>
           </span>
-          <span class="dock-tab-label" data-i18n="sidebarViewDockLabel">뷰</span>
-        </button>
-        <button type="button" id="sidebar-tools-btn" class="dock-tab" aria-label="뷰어 도구" aria-expanded="false" aria-controls="sidebar-tools-popup" title="뷰어 도구">
-          <span class="dock-tab-thumb">
-            <svg class="dock-tab-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-              <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
-            </svg>
-          </span>
-          <span class="dock-tab-label" data-i18n="toolsDockLabel">도구</span>
-        </button>
-        <button type="button" id="sidebar-tree-btn" class="dock-tab hidden" aria-label="파트 트리" aria-expanded="false" aria-controls="sidebar-tree-popup" title="파트 트리">
-          <span class="dock-tab-thumb">
-            <svg class="dock-tab-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-              <line x1="8" y1="6" x2="21" y2="6"/>
-              <line x1="8" y1="12" x2="21" y2="12"/>
-              <line x1="8" y1="18" x2="21" y2="18"/>
-              <line x1="3" y1="6" x2="3.01" y2="6"/>
-              <line x1="3" y1="12" x2="3.01" y2="12"/>
-              <line x1="3" y1="18" x2="3.01" y2="18"/>
-            </svg>
-          </span>
-          <span class="dock-tab-label" data-i18n="treeDockLabel">트리</span>
-        </button>
-        <button type="button" id="sidebar-info-btn" class="dock-tab" aria-label="모델 정보" aria-expanded="false" aria-controls="sidebar-info-popup" title="모델 정보">
-          <span class="dock-tab-thumb">
-            <svg class="dock-tab-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-              <circle cx="12" cy="12" r="10"/>
-              <line x1="12" y1="16" x2="12" y2="12"/>
-              <line x1="12" y1="8" x2="12.01" y2="8"/>
-            </svg>
-          </span>
-          <span class="dock-tab-label" data-i18n="infoDockLabel">정보</span>
+          <span class="dock-tab-label" data-i18n="settingsDockLabelMain">설정</span>
         </button>
         <span class="dock-group-sep dock-group-sep-v" aria-hidden="true"></span>
-        <button type="button" id="sidebar-lang-btn" class="dock-tab" aria-label="언어" aria-expanded="false" aria-controls="sidebar-lang-popup" title="언어">
+        <button type="button" id="sidebar-lab-btn" class="dock-tab dock-tab-lab" aria-label="시험 메뉴" aria-expanded="false" aria-controls="sidebar-lab-popup" title="시험 메뉴">
           <span class="dock-tab-thumb">
             <svg class="dock-tab-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-              <circle cx="12" cy="12" r="10"/>
-              <line x1="2" y1="12" x2="22" y2="12"/>
-              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+              <path d="M9 3h6l1 4H8l1-4z"/>
+              <path d="M10 14v7M14 14v7"/>
+              <path d="M8 21h8"/>
+              <path d="M6 7h12v7a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V7z"/>
             </svg>
+            <span id="dock-chat-badge" class="dock-badge hidden">0</span>
           </span>
-          <span class="dock-tab-label" data-i18n="langDockLabel">언어</span>
+          <span class="dock-tab-label" data-i18n="labDockLabel">시험</span>
         </button>
       </nav>
     </aside>
@@ -161,18 +157,31 @@
       </div>
     </div>
 
-    <div id="sidebar-view-popup" class="sidebar-popup dock-popup hidden" role="dialog" aria-label="View settings">
+    <div id="sidebar-display-popup" class="sidebar-popup dock-popup dock-popup-wide hidden" role="dialog" aria-label="Display settings">
       <header class="dock-popup-header dock-popup-drag-handle">
-        <h3 class="dock-popup-title" data-i18n="viewSettings">뷰 설정</h3>
+        <h3 class="dock-popup-title" data-i18n="displaySettingsTitle">보기</h3>
         <button type="button" class="dock-popup-close" aria-label="닫기">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
         </button>
       </header>
-      <div class="dock-popup-body dock-panel-form">
+      <div class="dock-popup-body dock-panel-form sidebar-panel-body">
+        <p class="dock-popup-section-title" data-i18n="cameraSection">카메라</p>
         <div class="btn-row">
           <button id="btn-reset-view" class="btn" data-i18n="resetView">뷰 초기화</button>
           <button id="btn-fit" class="btn" data-i18n="fitView">맞춤 보기</button>
         </div>
+        <div class="view-btn-grid">
+          <button type="button" id="btn-view-top" class="btn btn-sm" data-i18n="viewTop">평면</button>
+          <button type="button" id="btn-view-front" class="btn btn-sm" data-i18n="viewFront">정면</button>
+          <button type="button" id="btn-view-right" class="btn btn-sm" data-i18n="viewRight">우측</button>
+          <button type="button" id="btn-view-iso" class="btn btn-sm" data-i18n="viewIso">등각</button>
+        </div>
+        <div class="view-btn-grid flip-btn-grid">
+          <button type="button" id="btn-flip-x" class="btn btn-sm" data-i18n="flipHorizontal">좌우 반전</button>
+          <button type="button" id="btn-flip-y" class="btn btn-sm" data-i18n="flipVertical">상하 반전</button>
+        </div>
+        <button type="button" id="btn-screenshot" class="btn btn-sm btn-block" data-i18n="screenshot">스크린샷 저장</button>
+        <p class="dock-popup-section-title" data-i18n="colorSection">색상</p>
         <div class="slider-group">
           <label for="bg-color" data-i18n="bgColor">배경색</label>
           <input type="color" id="bg-color" value="#1a1d23" />
@@ -185,28 +194,49 @@
           </button>
           <input type="hidden" id="model-color" value="#6b9bd1" />
         </div>
+        <p class="dock-popup-section-title" data-i18n="gridSettingsTitle">그리드</p>
+        <div class="select-group">
+          <label for="grid-plane" data-i18n="gridPlane">그리드 평면</label>
+          <select id="grid-plane" class="select-input">
+            <option value="xy" selected data-i18n="gridPlaneXY">XY 평면 (Z축 위)</option>
+            <option value="xz" data-i18n="gridPlaneXZ">XZ 평면 (Y축 위)</option>
+            <option value="yz" data-i18n="gridPlaneYZ">YZ 평면 (X축 위)</option>
+          </select>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="toggle-grid" checked />
+          <span data-i18n="grid">그리드</span>
+        </label>
+        <p class="dock-popup-section-title" data-i18n="overlaySection">표시 옵션</p>
+        <div class="controls-grid dock-controls-grid">
+          <label class="toggle">
+            <input type="checkbox" id="toggle-axes" checked />
+            <span data-i18n="axes">축 표시</span>
+          </label>
+          <label class="toggle">
+            <input type="checkbox" id="toggle-wireframe" />
+            <span data-i18n="wireframe">와이어프레임</span>
+          </label>
+          <label class="toggle">
+            <input type="checkbox" id="toggle-auto-rotate" />
+            <span data-i18n="autoRotate">자동 회전</span>
+          </label>
+          <label class="toggle">
+            <input type="checkbox" id="toggle-cad-text" checked />
+            <span data-i18n="cadText">도면 텍스트</span>
+          </label>
+        </div>
       </div>
     </div>
 
-    <div id="sidebar-tools-popup" class="sidebar-popup dock-popup dock-popup-wide hidden" role="dialog" aria-label="Viewer tools">
+    <div id="sidebar-analyze-popup" class="sidebar-popup dock-popup dock-popup-wide hidden" role="dialog" aria-label="Analysis tools">
       <header class="dock-popup-header dock-popup-drag-handle">
-        <h3 class="dock-popup-title" data-i18n="viewerTools">뷰어 도구</h3>
+        <h3 class="dock-popup-title" data-i18n="analyzeSettingsTitle">분석</h3>
         <button type="button" class="dock-popup-close" aria-label="닫기">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
         </button>
       </header>
       <div class="dock-popup-body dock-panel-form sidebar-panel-body">
-        <div class="view-btn-grid">
-          <button type="button" id="btn-view-top" class="btn btn-sm" data-i18n="viewTop">평면</button>
-          <button type="button" id="btn-view-front" class="btn btn-sm" data-i18n="viewFront">정면</button>
-          <button type="button" id="btn-view-right" class="btn btn-sm" data-i18n="viewRight">우측</button>
-          <button type="button" id="btn-view-iso" class="btn btn-sm" data-i18n="viewIso">등각</button>
-        </div>
-        <div class="view-btn-grid flip-btn-grid">
-          <button type="button" id="btn-flip-x" class="btn btn-sm" data-i18n="flipHorizontal">좌우 반전</button>
-          <button type="button" id="btn-flip-y" class="btn btn-sm" data-i18n="flipVertical">상하 반전</button>
-        </div>
-        <button type="button" id="btn-screenshot" class="btn btn-sm btn-block" data-i18n="screenshot">스크린샷 저장</button>
         <div class="controls-grid">
           <label class="toggle">
             <input type="checkbox" id="toggle-measure" />
@@ -266,40 +296,33 @@
       </div>
     </div>
 
-    <div id="sidebar-tree-popup" class="sidebar-popup dock-popup dock-popup-wide hidden" role="dialog" aria-label="Part tree">
+    <div id="sidebar-model-popup" class="sidebar-popup dock-popup dock-popup-wide hidden" role="dialog" aria-label="Model">
       <header class="dock-popup-header dock-popup-drag-handle">
-        <h3 id="tree-panel-title" class="dock-popup-title" data-i18n="partTree">파트 트리</h3>
+        <h3 class="dock-popup-title" data-i18n="modelDockTitle">모델</h3>
         <button type="button" class="dock-popup-close" aria-label="닫기">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
         </button>
       </header>
-      <div class="dock-popup-body sidebar-panel-body">
-        <div id="tree-panel" class="tree-panel-inner">
-          <div id="tree-list" class="tree-list"></div>
-        </div>
-      </div>
-    </div>
-
-    <div id="sidebar-info-popup" class="sidebar-popup dock-popup hidden" role="dialog" aria-label="Model info">
-      <header class="dock-popup-header dock-popup-drag-handle">
-        <h3 class="dock-popup-title" data-i18n="modelInfo">모델 정보</h3>
-        <button type="button" class="dock-popup-close" aria-label="닫기">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
-        </button>
-      </header>
-      <div class="dock-popup-body dock-panel-form">
+      <div class="dock-popup-body dock-panel-form sidebar-panel-body">
+        <p class="dock-popup-section-title" data-i18n="modelInfo">모델 정보</p>
         <dl class="stats" id="stats">
           <div><dt data-i18n="statVertices">정점</dt><dd id="stat-vertices">—</dd></div>
           <div><dt data-i18n="statTriangles">삼각형</dt><dd id="stat-triangles">—</dd></div>
           <div><dt data-i18n="statMeshes">메시</dt><dd id="stat-meshes">—</dd></div>
           <div><dt data-i18n="statSize">크기 (mm)</dt><dd id="stat-size">—</dd></div>
         </dl>
+        <div id="model-tree-section" class="hidden">
+          <p id="tree-panel-title" class="dock-popup-section-title" data-i18n="partTree">파트 트리</p>
+          <div id="tree-panel" class="tree-panel-inner">
+            <div id="tree-list" class="tree-list"></div>
+          </div>
+        </div>
       </div>
     </div>
 
-    <div id="sidebar-lang-popup" class="sidebar-popup dock-popup hidden" role="dialog" aria-label="Language">
+    <div id="sidebar-settings-popup" class="sidebar-popup dock-popup hidden" role="dialog" aria-label="Settings">
       <header class="dock-popup-header dock-popup-drag-handle">
-        <h3 class="dock-popup-title" data-i18n="language">언어</h3>
+        <h3 class="dock-popup-title" data-i18n="settingsDockLabelMain">설정</h3>
         <button type="button" class="dock-popup-close" aria-label="닫기">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
         </button>
@@ -316,10 +339,60 @@
             <option value="hi">हिन्दी</option>
           </select>
         </div>
+        <div class="select-group">
+          <label for="load-quality" data-i18n="loadQuality">로딩 품질</label>
+          <select id="load-quality" class="select-input">
+            <option value="auto" selected data-i18n="loadQualityAuto">자동 (권장)</option>
+            <option value="fast" data-i18n="loadQualityFast">빠른 미리보기</option>
+            <option value="full" data-i18n="loadQualityFull">원본 품질</option>
+          </select>
+        </div>
         <p class="sidebar-footer-note" data-i18n="footerControls">마우스: 회전 · 우클릭: 이동 · 휠: 확대/축소</p>
         <p class="sidebar-contact">
           <a href="mailto:seminesman@gmail.com">seminesman@gmail.com</a>
         </p>
+      </div>
+    </div>
+
+    <div id="sidebar-lab-popup" class="sidebar-popup dock-popup dock-popup-wide hidden" role="dialog" aria-label="Lab features">
+      <header class="dock-popup-header dock-popup-drag-handle">
+        <h3 class="dock-popup-title" data-i18n="labSettingsTitle">시험 메뉴</h3>
+        <div class="dock-popup-actions">
+          <button type="button" id="visitor-chat-clear" class="dock-text-btn" data-i18n="chatClear">지우기</button>
+          <button type="button" class="dock-popup-close" aria-label="닫기">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+          </button>
+        </div>
+      </header>
+      <div class="dock-popup-body sidebar-panel-body sidebar-lab-body">
+        <p class="dock-popup-section-title" data-i18n="chatTitle">방문자 메시지</p>
+        <div id="visitor-chat-panel" class="visitor-chat-panel">
+          <div id="visitor-chat-messages" class="visitor-chat-messages" role="log" aria-live="polite"></div>
+          <form id="visitor-chat-form" class="visitor-chat-form">
+            <input type="text" id="visitor-chat-name" class="visitor-chat-name" maxlength="24" data-i18n-placeholder="chatNamePlaceholder" placeholder="닉네임 (선택)" autocomplete="nickname" />
+            <div class="visitor-chat-input-row">
+              <input type="text" id="visitor-chat-input" class="visitor-chat-input" maxlength="500" required data-i18n-placeholder="chatInputPlaceholder" placeholder="메시지를 입력하세요..." autocomplete="off" />
+              <button type="submit" class="btn btn-primary visitor-chat-send" data-i18n="chatSend">전송</button>
+            </div>
+          </form>
+          <p id="visitor-chat-hint" class="visitor-chat-hint" data-i18n="chatHintLocal">메시지는 이 브라우저에 저장됩니다.</p>
+        </div>
+        <p class="dock-popup-section-title" data-i18n="bgParamsTitle">블랙홀 배경</p>
+        <div id="bg-pixels-controls" class="lab-section-mount"></div>
+        <p class="dock-popup-section-title" data-i18n="bgSettingsTitle">배경 설정</p>
+        <div id="bg-settings-controls" class="lab-section-mount"></div>
+        <p class="dock-popup-section-title" data-i18n="labUiSection">UI 실험</p>
+        <div class="controls-grid dock-controls-grid">
+          <label class="toggle">
+            <input type="checkbox" id="toggle-empty-hint" checked />
+            <span data-i18n="emptyLoadHint">불러오기 안내</span>
+          </label>
+          <label class="toggle">
+            <input type="checkbox" id="toggle-model-remove" checked />
+            <span data-i18n="modelRemoveBtn">모델 제거 버튼</span>
+          </label>
+        </div>
+        <p class="dock-popup-lab-note" data-i18n="labMenuNote">실험·데모 기능입니다. 일반 사용 시 설정 메뉴를 이용하세요.</p>
       </div>
     </div>
 
@@ -343,197 +416,7 @@
       </div>
       <div id="toast" class="toast hidden"></div>
 
-      <nav class="viewport-dock" id="viewport-dock" aria-label="Viewport tools">
-        <div class="viewport-dock-list">
-          <button type="button" id="dock-chat-btn" class="dock-tab" aria-label="방문자 메시지" aria-expanded="false" aria-controls="dock-chat-popup" title="방문자 메시지">
-            <span class="dock-tab-thumb">
-              <svg class="dock-tab-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-                <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
-              </svg>
-              <span id="dock-chat-badge" class="dock-badge hidden">0</span>
-            </span>
-            <span class="dock-tab-label" data-i18n="chatDockLabel">채팅</span>
-          </button>
-          <span class="dock-group-sep" aria-hidden="true"></span>
-          <button type="button" id="dock-bg-btn" class="dock-tab" aria-label="블랙홀" aria-expanded="false" aria-controls="dock-bg-popup" title="블랙홀">
-            <span class="dock-tab-thumb">
-              <svg class="dock-tab-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <circle cx="12" cy="12" r="3.5" fill="currentColor"/>
-                <ellipse cx="12" cy="12" rx="9.5" ry="2.8" stroke="currentColor" stroke-width="1.6" transform="rotate(-22 12 12)"/>
-                <ellipse cx="12" cy="12" rx="8.5" ry="2.2" stroke="currentColor" stroke-width="1" opacity="0.45" transform="rotate(24 12 12)"/>
-              </svg>
-            </span>
-            <span class="dock-tab-label" data-i18n="bgDockLabel">블랙홀</span>
-          </button>
-          <button type="button" id="dock-settings-btn" class="dock-tab" aria-label="배경 설정" aria-expanded="false" aria-controls="dock-settings-popup" title="배경 설정">
-            <span class="dock-tab-thumb">
-              <svg class="dock-tab-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-                <circle cx="12" cy="12" r="3"/>
-                <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
-              </svg>
-            </span>
-            <span class="dock-tab-label" data-i18n="settingsDockLabel">배경설정</span>
-          </button>
-          <button type="button" id="dock-grid-btn" class="dock-tab" aria-label="그리드 평면" aria-expanded="false" aria-controls="dock-grid-popup" title="그리드 평면">
-            <span class="dock-tab-thumb">
-              <svg class="dock-tab-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-                <rect x="3" y="3" width="18" height="18" rx="2"/>
-                <line x1="3" y1="9" x2="21" y2="9"/>
-                <line x1="3" y1="15" x2="21" y2="15"/>
-                <line x1="9" y1="3" x2="9" y2="21"/>
-                <line x1="15" y1="3" x2="15" y2="21"/>
-              </svg>
-            </span>
-            <span class="dock-tab-label" data-i18n="gridDockLabel">그리드</span>
-          </button>
-          <button type="button" id="dock-view-btn" class="dock-tab" aria-label="뷰 설정" aria-expanded="false" aria-controls="dock-view-popup" title="뷰 설정">
-            <span class="dock-tab-thumb">
-              <svg class="dock-tab-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                <circle cx="12" cy="12" r="3"/>
-              </svg>
-            </span>
-            <span class="dock-tab-label" data-i18n="viewDockLabel">뷰</span>
-          </button>
-          <button type="button" id="dock-misc-btn" class="dock-tab" aria-label="기타 설정" aria-expanded="false" aria-controls="dock-misc-popup" title="기타 설정">
-            <span class="dock-tab-thumb">
-              <svg class="dock-tab-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-                <line x1="4" y1="6" x2="20" y2="6"/>
-                <line x1="4" y1="12" x2="20" y2="12"/>
-                <line x1="4" y1="18" x2="20" y2="18"/>
-                <circle cx="8" cy="6" r="2" fill="currentColor"/>
-                <circle cx="14" cy="12" r="2" fill="currentColor"/>
-                <circle cx="10" cy="18" r="2" fill="currentColor"/>
-              </svg>
-            </span>
-            <span class="dock-tab-label" data-i18n="miscDockLabel">기타</span>
-          </button>
-        </div>
-      </nav>
-
       <button type="button" id="space-travel-exit" class="space-travel-exit hidden" data-i18n="bgSpaceTravelExit" data-i18n-title="bgSpaceTravelExitTitle" title="복귀 (Esc)">복귀</button>
-
-      <div id="dock-chat-popup" class="dock-popup hidden" role="dialog" aria-label="Visitor chat">
-        <header class="dock-popup-header dock-popup-drag-handle">
-          <h3 class="dock-popup-title" data-i18n="chatTitle">방문자 메시지</h3>
-          <div class="dock-popup-actions">
-            <button type="button" id="visitor-chat-clear" class="dock-text-btn" data-i18n="chatClear">지우기</button>
-            <button type="button" class="dock-popup-close" aria-label="닫기">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
-            </button>
-          </div>
-        </header>
-        <div id="visitor-chat-panel" class="visitor-chat-panel">
-          <div id="visitor-chat-messages" class="visitor-chat-messages" role="log" aria-live="polite"></div>
-          <form id="visitor-chat-form" class="visitor-chat-form">
-            <input type="text" id="visitor-chat-name" class="visitor-chat-name" maxlength="24" data-i18n-placeholder="chatNamePlaceholder" placeholder="닉네임 (선택)" autocomplete="nickname" />
-            <div class="visitor-chat-input-row">
-              <input type="text" id="visitor-chat-input" class="visitor-chat-input" maxlength="500" required data-i18n-placeholder="chatInputPlaceholder" placeholder="메시지를 입력하세요..." autocomplete="off" />
-              <button type="submit" class="btn btn-primary visitor-chat-send" data-i18n="chatSend">전송</button>
-            </div>
-          </form>
-          <p id="visitor-chat-hint" class="visitor-chat-hint" data-i18n="chatHintLocal">메시지는 이 브라우저에 저장됩니다.</p>
-        </div>
-      </div>
-
-      <div id="dock-bg-popup" class="dock-popup dock-popup-wide hidden" role="dialog" aria-label="Black hole background">
-        <header class="dock-popup-header dock-popup-drag-handle">
-          <h3 class="dock-popup-title" data-i18n="bgParamsTitle">블랙홀 배경</h3>
-          <button type="button" class="dock-popup-close" aria-label="닫기">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
-          </button>
-        </header>
-        <div id="bg-pixels-controls" class="dock-popup-body"></div>
-      </div>
-
-      <div id="dock-settings-popup" class="dock-popup dock-popup-wide hidden" role="dialog" aria-label="Background settings">
-        <header class="dock-popup-header dock-popup-drag-handle">
-          <h3 class="dock-popup-title" data-i18n="bgSettingsTitle">배경 설정</h3>
-          <button type="button" class="dock-popup-close" aria-label="닫기">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
-          </button>
-        </header>
-        <div id="bg-settings-controls" class="dock-popup-body"></div>
-      </div>
-
-      <div id="dock-grid-popup" class="dock-popup hidden" role="dialog" aria-label="Grid plane settings">
-        <header class="dock-popup-header dock-popup-drag-handle">
-          <h3 class="dock-popup-title" data-i18n="gridSettingsTitle">그리드 평면</h3>
-          <button type="button" class="dock-popup-close" aria-label="닫기">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
-          </button>
-        </header>
-        <div class="dock-popup-body dock-panel-form">
-          <div class="select-group">
-            <label for="grid-plane" data-i18n="gridPlane">그리드 평면</label>
-            <select id="grid-plane" class="select-input">
-              <option value="xy" selected data-i18n="gridPlaneXY">XY 평면 (Z축 위)</option>
-              <option value="xz" data-i18n="gridPlaneXZ">XZ 평면 (Y축 위)</option>
-              <option value="yz" data-i18n="gridPlaneYZ">YZ 평면 (X축 위)</option>
-            </select>
-          </div>
-          <label class="toggle">
-            <input type="checkbox" id="toggle-grid" checked />
-            <span data-i18n="grid">그리드</span>
-          </label>
-        </div>
-      </div>
-
-      <div id="dock-view-popup" class="dock-popup hidden" role="dialog" aria-label="View settings">
-        <header class="dock-popup-header dock-popup-drag-handle">
-          <h3 class="dock-popup-title" data-i18n="viewSettings">뷰 설정</h3>
-          <button type="button" class="dock-popup-close" aria-label="닫기">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
-          </button>
-        </header>
-        <div class="dock-popup-body dock-panel-form">
-          <div class="controls-grid dock-controls-grid">
-            <label class="toggle">
-              <input type="checkbox" id="toggle-axes" checked />
-              <span data-i18n="axes">축 표시</span>
-            </label>
-            <label class="toggle">
-              <input type="checkbox" id="toggle-wireframe" />
-              <span data-i18n="wireframe">와이어프레임</span>
-            </label>
-            <label class="toggle">
-              <input type="checkbox" id="toggle-auto-rotate" />
-              <span data-i18n="autoRotate">자동 회전</span>
-            </label>
-            <label class="toggle">
-              <input type="checkbox" id="toggle-cad-text" checked />
-              <span data-i18n="cadText">도면 텍스트</span>
-            </label>
-            <label class="toggle">
-              <input type="checkbox" id="toggle-empty-hint" checked />
-              <span data-i18n="emptyLoadHint">불러오기 안내</span>
-            </label>
-            <label class="toggle">
-              <input type="checkbox" id="toggle-model-remove" checked />
-              <span data-i18n="modelRemoveBtn">모델 제거 버튼</span>
-            </label>
-          </div>
-        </div>
-      </div>
-
-      <div id="dock-misc-popup" class="dock-popup hidden" role="dialog" aria-label="Other settings">
-        <header class="dock-popup-header dock-popup-drag-handle">
-          <h3 class="dock-popup-title" data-i18n="miscSettingsTitle">기타 설정</h3>
-          <button type="button" class="dock-popup-close" aria-label="닫기">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
-          </button>
-        </header>
-        <div class="dock-popup-body dock-panel-form">
-          <div class="select-group">
-            <label for="load-quality" data-i18n="loadQuality">로딩 품질</label>
-            <select id="load-quality" class="select-input">
-              <option value="auto" selected data-i18n="loadQualityAuto">자동 (권장)</option>
-              <option value="fast" data-i18n="loadQualityFast">빠른 미리보기</option>
-              <option value="full" data-i18n="loadQualityFull">원본 품질</option>
-            </select>
-          </div>
-        </div>
-      </div>
     </main>
 
     <div id="loading" class="loading-screen hidden" aria-live="polite" aria-busy="false">
@@ -706,7 +589,7 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/occt-import-js@0.0.23/dist/occt-import-js.js"></script>
-  <script type="module" src="i18n-boot.js?v=2.9.0"></script>
-  <script type="module" src="app.js?v=2.9.0"></script>
+  <script type="module" src="i18n-boot.js?v=2.10.0"></script>
+  <script type="module" src="app.js?v=2.10.0"></script>
 </body>
 </html>

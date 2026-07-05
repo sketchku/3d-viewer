@@ -23,13 +23,13 @@ function readLayerColor(object, fallback = '#e8eaed') {
 export function initPartTree({
   modelGroup, getModelRoot, t, THREE, openColorPicker, onSelectObject,
 }) {
-  const treeBtn = document.getElementById('sidebar-tree-btn');
+  const treeSection = document.getElementById('model-tree-section');
   const title = document.getElementById('tree-panel-title');
   const list = document.getElementById('tree-list');
   if (!list) return { refresh: () => {}, clear: () => {} };
 
   function setTreeVisible(visible) {
-    treeBtn?.classList.toggle('hidden', !visible);
+    treeSection?.classList.toggle('hidden', !visible);
   }
 
   const Color = THREE?.Color;
