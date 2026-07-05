@@ -1043,77 +1043,183 @@ html, body {
   height: 100%;
 }
 
-/* Visitor chat */
-.visitor-chat {
+/* Viewport dock — chat & black-hole icon buttons */
+.viewport-dock {
   position: absolute;
-  left: 12px;
-  right: 12px;
-  bottom: 12px;
-  z-index: 12;
+  left: 50%;
+  bottom: 14px;
+  transform: translateX(-50%);
+  z-index: 14;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  background: rgba(15, 17, 23, 0.88);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
   pointer-events: auto;
 }
 
-.visitor-chat-bar {
+.dock-icon-btn {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 8px;
-}
-
-.visitor-chat-toggle {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  background: rgba(15, 17, 23, 0.92);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  color: var(--text);
-  font-size: 0.82rem;
-  cursor: pointer;
-  backdrop-filter: blur(8px);
-  font-family: var(--font);
-}
-
-.visitor-chat-toggle:hover {
-  border-color: var(--accent);
-}
-
-.visitor-chat-count {
-  margin-left: auto;
-  min-width: 1.4rem;
-  padding: 1px 6px;
-  border-radius: 999px;
-  background: rgba(79, 143, 247, 0.2);
-  color: var(--accent);
-  font-size: 0.72rem;
-  font-variant-numeric: tabular-nums;
-}
-
-.visitor-chat-clear-btn {
-  padding: 8px 10px;
-  background: rgba(15, 17, 23, 0.92);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.04);
   color: var(--text-muted);
-  font-size: 0.75rem;
   cursor: pointer;
-  backdrop-filter: blur(8px);
+  transition: border-color 0.15s, color 0.15s, background 0.15s, transform 0.12s;
   font-family: var(--font);
 }
 
-.visitor-chat-clear-btn:hover {
+.dock-icon-btn:hover {
+  color: var(--text);
+  border-color: var(--border);
+  background: rgba(79, 143, 247, 0.1);
+}
+
+.dock-icon-btn-active,
+.dock-icon-btn[aria-expanded="true"] {
+  color: var(--accent);
+  border-color: rgba(79, 143, 247, 0.55);
+  background: rgba(79, 143, 247, 0.16);
+}
+
+.dock-icon {
+  display: block;
+  flex-shrink: 0;
+}
+
+.dock-badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  min-width: 1.1rem;
+  height: 1.1rem;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 700;
+  line-height: 1.1rem;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+
+.dock-badge.hidden {
+  display: none;
+}
+
+/* Dock popups */
+.dock-popup {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 68px;
+  z-index: 13;
+  max-height: min(420px, 52vh);
+  display: flex;
+  flex-direction: column;
+  background: rgba(15, 17, 23, 0.96);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+  pointer-events: auto;
+}
+
+.dock-popup.hidden {
+  display: none;
+}
+
+.dock-popup-wide {
+  max-height: min(520px, 62vh);
+}
+
+.dock-popup-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.dock-popup-title {
+  margin: 0;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.dock-popup-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dock-text-btn {
+  padding: 5px 10px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  cursor: pointer;
+  font-family: var(--font);
+}
+
+.dock-text-btn:hover {
   color: var(--text);
   border-color: var(--accent);
 }
 
+.dock-popup-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.dock-popup-close:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.dock-popup-body {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.dock-popup-body .bg-pixels-panel {
+  padding: 12px 14px 16px;
+}
+
+/* Visitor chat (inside popup) */
 .visitor-chat-panel {
-  margin-top: 8px;
-  background: rgba(15, 17, 23, 0.94);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  backdrop-filter: blur(10px);
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
+  flex: 1;
+  min-height: 0;
 }
 
 .visitor-chat-messages {

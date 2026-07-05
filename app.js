@@ -11,7 +11,7 @@ import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
 import { SimplifyModifier } from 'three/addons/modifiers/SimplifyModifier.js';
 import { generateThreeViewDXF } from './drawing-export.js?v=2.4.1';
 import { t, getLanguage } from './i18n.js?v=2.6.14';
-import { initVisitorChat } from './visitor-chat.js?v=2.5.6';
+import { initVisitorChat } from './visitor-chat.js?v=2.7.0';
 import { initViewerFeatures } from './viewer-features.js?v=2.6.12';
 import { initRecentFiles, saveRecentFile } from './recent-files.js?v=2.4.1';
 import { initModelTabs, captureModelThumbnail } from './model-tabs.js?v=2.6.1';
@@ -40,7 +40,8 @@ import {
   getConvertBackendsForExt,
 } from './cad-step-convert.js?v=2.5.0';
 import { isStaticWebDeployment } from './web-config.js?v=2.5.0';
-import { createBgPixels } from './bg-pixels.js?v=2.6.6';
+import { createBgPixels } from './bg-pixels.js?v=2.7.0';
+import { initViewportDock } from './viewport-dock.js?v=2.7.0';
 import { initColorPicker } from './color-picker.js?v=2.6.7';
 
 let cad2dModule = null;
@@ -517,7 +518,8 @@ async function init() {
     downloadBlob,
     getFilenameBase: getBaseFilename,
   });
-  initVisitorChat({ t, showToast, getLang: getLanguage });
+  const chatApi = await initVisitorChat({ t, showToast, getLang: getLanguage });
+  initViewportDock({ bgPixels, chatApi });
   animate();
 
   if (location.protocol === 'file:') {

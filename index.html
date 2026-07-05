@@ -8,6 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="bg-pixels-panel.css" />
   <script type="importmap">
   {
     "imports": {
@@ -275,18 +276,33 @@
       </div>
       <div id="toast" class="toast hidden"></div>
 
-      <section id="visitor-chat" class="visitor-chat" aria-label="Visitor chat">
-        <div class="visitor-chat-bar">
-          <button type="button" id="visitor-chat-toggle" class="visitor-chat-toggle" aria-expanded="false">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-            </svg>
-            <span data-i18n="chatTitle">방문자 메시지</span>
-            <span id="visitor-chat-count" class="visitor-chat-count">0</span>
-          </button>
-          <button type="button" id="visitor-chat-clear" class="visitor-chat-clear-btn" data-i18n="chatClear">지우기</button>
-        </div>
-        <div id="visitor-chat-panel" class="visitor-chat-panel hidden">
+      <nav class="viewport-dock" id="viewport-dock" aria-label="Viewport tools">
+        <button type="button" id="dock-chat-btn" class="dock-icon-btn" aria-label="방문자 메시지" aria-expanded="false" aria-controls="dock-chat-popup" title="방문자 메시지">
+          <svg class="dock-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+            <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
+          </svg>
+          <span id="dock-chat-badge" class="dock-badge hidden">0</span>
+        </button>
+        <button type="button" id="dock-bg-btn" class="dock-icon-btn" aria-label="블랙홀 배경" aria-expanded="false" aria-controls="dock-bg-popup" title="블랙홀 배경">
+          <svg class="dock-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <circle cx="12" cy="12" r="3.5" fill="currentColor"/>
+            <ellipse cx="12" cy="12" rx="9.5" ry="2.8" stroke="currentColor" stroke-width="1.6" transform="rotate(-22 12 12)"/>
+            <ellipse cx="12" cy="12" rx="8.5" ry="2.2" stroke="currentColor" stroke-width="1" opacity="0.45" transform="rotate(24 12 12)"/>
+          </svg>
+        </button>
+      </nav>
+
+      <div id="dock-chat-popup" class="dock-popup hidden" role="dialog" aria-label="Visitor chat">
+        <header class="dock-popup-header">
+          <h3 class="dock-popup-title" data-i18n="chatTitle">방문자 메시지</h3>
+          <div class="dock-popup-actions">
+            <button type="button" id="visitor-chat-clear" class="dock-text-btn" data-i18n="chatClear">지우기</button>
+            <button type="button" class="dock-popup-close" aria-label="닫기">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+            </button>
+          </div>
+        </header>
+        <div id="visitor-chat-panel" class="visitor-chat-panel">
           <div id="visitor-chat-messages" class="visitor-chat-messages" role="log" aria-live="polite"></div>
           <form id="visitor-chat-form" class="visitor-chat-form">
             <input type="text" id="visitor-chat-name" class="visitor-chat-name" maxlength="24" data-i18n-placeholder="chatNamePlaceholder" placeholder="닉네임 (선택)" autocomplete="nickname" />
@@ -297,7 +313,17 @@
           </form>
           <p id="visitor-chat-hint" class="visitor-chat-hint" data-i18n="chatHintLocal">메시지는 이 브라우저에 저장됩니다.</p>
         </div>
-      </section>
+      </div>
+
+      <div id="dock-bg-popup" class="dock-popup dock-popup-wide hidden" role="dialog" aria-label="Black hole background">
+        <header class="dock-popup-header">
+          <h3 class="dock-popup-title">블랙홀 배경</h3>
+          <button type="button" class="dock-popup-close" aria-label="닫기">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+          </button>
+        </header>
+        <div id="bg-pixels-controls" class="dock-popup-body"></div>
+      </div>
     </main>
 
     <div id="loading" class="loading-screen hidden" aria-live="polite" aria-busy="false">
@@ -471,6 +497,6 @@
 
   <script src="https://cdn.jsdelivr.net/npm/occt-import-js@0.0.23/dist/occt-import-js.js"></script>
   <script type="module" src="i18n-boot.js?v=2.6.14"></script>
-  <script type="module" src="app.js?v=2.6.14"></script>
+  <script type="module" src="app.js?v=2.7.0"></script>
 </body>
 </html>

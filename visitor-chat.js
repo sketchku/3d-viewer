@@ -206,19 +206,20 @@ async function createStore() {
 }
 
 export async function initVisitorChat({ t, showToast, getLang }) {
-  const root = document.getElementById('visitor-chat');
-  const panel = document.getElementById('visitor-chat-panel');
-  const toggleBtn = document.getElementById('visitor-chat-toggle');
-  const clearBtn = document.getElementById('visitor-chat-clear');
+  const popup = document.getElementById('dock-chat-popup');
   const messagesEl = document.getElementById('visitor-chat-messages');
   const form = document.getElementById('visitor-chat-form');
   const nameInput = document.getElementById('visitor-chat-name');
   const textInput = document.getElementById('visitor-chat-input');
-  const countEl = document.getElementById('visitor-chat-count');
+  const clearBtn = document.getElementById('visitor-chat-clear');
   const hintEl = document.getElementById('visitor-chat-hint');
   const sendBtn = form?.querySelector('.visitor-chat-send');
+  const countEls = [
+    document.getElementById('dock-chat-badge'),
+    document.getElementById('visitor-chat-count'),
+  ].filter(Boolean);
 
-  if (!root || !panel || !messagesEl || !form || !textInput) return null;
+  if (!popup || !messagesEl || !form || !textInput) return null;
 
   let store;
   try {
@@ -281,7 +282,13 @@ export async function initVisitorChat({ t, showToast, getLang }) {
       }
     }
 
-    if (countEl) countEl.textContent = String(messages.length);
+    const count = String(messages.length);
+    for (const el of countEls) {
+      el.textContent = count;
+      if (el.classList.contains('dock-badge')) {
+        el.classList.toggle('hidden', messages.length === 0);
+      }
+    }
     messagesEl.scrollTop = messagesEl.scrollHeight;
   }
 
@@ -292,8 +299,10 @@ export async function initVisitorChat({ t, showToast, getLang }) {
 
   function setExpanded(open) {
     expanded = open;
-    panel.classList.toggle('hidden', !open);
-    toggleBtn?.setAttribute('aria-expanded', open ? 'true' : 'false');
+    popup.classList.toggle('hidden', !open);
+    const dockBtn = document.getElementById('dock-chat-btn');
+    dockBtn?.setAttribute('aria-expanded', open ? 'true' : 'false');
+    dockBtn?.classList.toggle('dock-icon-btn-active', open);
   }
 
   function setSending(active) {
@@ -392,7 +401,7 @@ export async function initVisitorChat({ t, showToast, getLang }) {
     showToast?.(t('chatFirebaseError'), 'error');
   }
 
-  setExpanded(true);
+  setExpanded(false);
   textInput.disabled = false;
 
   if (store.subscribe) {
@@ -401,8 +410,6 @@ export async function initVisitorChat({ t, showToast, getLang }) {
       renderMessages();
     });
   }
-
-  toggleBtn?.addEventListener('click', () => setExpanded(!expanded));
 
   clearBtn?.addEventListener('click', async () => {
     if (!window.confirm(t('chatClearConfirm'))) return;
@@ -425,8 +432,8 @@ export async function initVisitorChat({ t, showToast, getLang }) {
     if (!expanded) setExpanded(true);
   });
 
-  root.addEventListener('pointerdown', (event) => event.stopPropagation());
-  root.addEventListener('click', (event) => event.stopPropagation());
+  popup.addEventListener('pointerdown', (event) => event.stopPropagation());
+  popup.addEventListener('click', (event) => event.stopPropagation());
 
   document.addEventListener('languagechange', () => {
     updateHint();
@@ -434,7 +441,11 @@ export async function initVisitorChat({ t, showToast, getLang }) {
     renderMessages();
   });
 
-  return { reload: loadMessages };
+  return {
+    reload: loadMessages,
+    setExpanded,
+    getExpanded: () => expanded,
+  };
 }
 
 function escapeHtml(value) {
