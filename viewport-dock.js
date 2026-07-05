@@ -15,6 +15,82 @@ function openPopup(popup, btn) {
   btn?.classList.add('active');
 }
 
+function initPopupDrag(popup, viewport) {
+  const handle = popup?.querySelector('.dock-popup-drag-handle');
+  if (!handle || !popup || !viewport) return;
+
+  let dragging = false;
+  let pointerId = null;
+  let startX = 0;
+  let startY = 0;
+  let startLeft = 0;
+  let startTop = 0;
+
+  function clampPosition(left, top) {
+    const vp = viewport.getBoundingClientRect();
+    const w = popup.offsetWidth;
+    const h = popup.offsetHeight;
+    return {
+      left: Math.max(8, Math.min(left, vp.width - w - 8)),
+      top: Math.max(8, Math.min(top, vp.height - h - 8)),
+    };
+  }
+
+  function applyPosition(left, top) {
+    const pos = clampPosition(left, top);
+    popup.classList.add('dock-popup-positioned');
+    popup.style.left = `${pos.left}px`;
+    popup.style.top = `${pos.top}px`;
+    popup.style.bottom = 'auto';
+    popup.style.transform = 'none';
+  }
+
+  handle.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0) return;
+    if (e.target.closest('button, input, select, a, label, .dock-text-btn')) return;
+
+    const vp = viewport.getBoundingClientRect();
+    const rect = popup.getBoundingClientRect();
+
+    if (!popup.classList.contains('dock-popup-positioned')) {
+      applyPosition(rect.left - vp.left, rect.top - vp.top);
+    }
+
+    dragging = true;
+    pointerId = e.pointerId;
+    startX = e.clientX;
+    startY = e.clientY;
+    startLeft = parseFloat(popup.style.left) || 0;
+    startTop = parseFloat(popup.style.top) || 0;
+
+    handle.setPointerCapture(pointerId);
+    handle.classList.add('dock-dragging');
+    e.preventDefault();
+    e.stopPropagation();
+  });
+
+  handle.addEventListener('pointermove', (e) => {
+    if (!dragging || e.pointerId !== pointerId) return;
+    const dx = e.clientX - startX;
+    const dy = e.clientY - startY;
+    applyPosition(startLeft + dx, startTop + dy);
+    e.preventDefault();
+  });
+
+  function endDrag(e) {
+    if (!dragging || (e.pointerId !== undefined && e.pointerId !== pointerId)) return;
+    dragging = false;
+    if (pointerId != null) {
+      handle.releasePointerCapture(pointerId);
+      pointerId = null;
+    }
+    handle.classList.remove('dock-dragging');
+  }
+
+  handle.addEventListener('pointerup', endDrag);
+  handle.addEventListener('pointercancel', endDrag);
+}
+
 /**
  * @param {{
  *   bgPixels: object,
@@ -31,15 +107,18 @@ export function initViewportDock({
   showToast = () => {},
   onSpaceTravelChange = () => {},
 }) {
+  const viewport = document.querySelector('main.viewport');
   const chatBtn = document.getElementById('dock-chat-btn');
   const bgBtn = document.getElementById('dock-bg-btn');
   const settingsBtn = document.getElementById('dock-settings-btn');
   const gridBtn = document.getElementById('dock-grid-btn');
+  const viewBtn = document.getElementById('dock-view-btn');
   const miscBtn = document.getElementById('dock-misc-btn');
   const chatPopup = document.getElementById('dock-chat-popup');
   const bgPopup = document.getElementById('dock-bg-popup');
   const settingsPopup = document.getElementById('dock-settings-popup');
   const gridPopup = document.getElementById('dock-grid-popup');
+  const viewPopup = document.getElementById('dock-view-popup');
   const miscPopup = document.getElementById('dock-misc-popup');
 
   const bgMount = document.getElementById('bg-pixels-controls');
@@ -75,8 +154,13 @@ export function initViewportDock({
     { popup: bgPopup, btn: bgBtn, id: 'bg' },
     { popup: settingsPopup, btn: settingsBtn, id: 'settings' },
     { popup: gridPopup, btn: gridBtn, id: 'grid' },
+    { popup: viewPopup, btn: viewBtn, id: 'view' },
     { popup: miscPopup, btn: miscBtn, id: 'misc' },
   ];
+
+  for (const { popup } of popups) {
+    initPopupDrag(popup, viewport);
+  }
 
   function closeAll(exceptId) {
     for (const { popup, btn, id } of popups) {
@@ -126,6 +210,14 @@ export function initViewportDock({
     closeAll(open ? 'grid' : null);
     if (open) openPopup(gridPopup, gridBtn);
     else closePopup(gridPopup, gridBtn);
+  });
+
+  viewBtn?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const open = viewPopup?.classList.contains('hidden');
+    closeAll(open ? 'view' : null);
+    if (open) openPopup(viewPopup, viewBtn);
+    else closePopup(viewPopup, viewBtn);
   });
 
   miscBtn?.addEventListener('click', (e) => {

@@ -110,32 +110,6 @@
 
       <section class="panel">
         <h2 data-i18n="viewSettings">뷰 설정</h2>
-        <div class="controls-grid">
-          <label class="toggle">
-            <input type="checkbox" id="toggle-axes" checked />
-            <span data-i18n="axes">축 표시</span>
-          </label>
-          <label class="toggle">
-            <input type="checkbox" id="toggle-wireframe" />
-            <span data-i18n="wireframe">와이어프레임</span>
-          </label>
-          <label class="toggle">
-            <input type="checkbox" id="toggle-auto-rotate" />
-            <span data-i18n="autoRotate">자동 회전</span>
-          </label>
-          <label class="toggle">
-            <input type="checkbox" id="toggle-cad-text" checked />
-            <span data-i18n="cadText">도면 텍스트</span>
-          </label>
-          <label class="toggle">
-            <input type="checkbox" id="toggle-empty-hint" checked />
-            <span data-i18n="emptyLoadHint">불러오기 안내</span>
-          </label>
-          <label class="toggle">
-            <input type="checkbox" id="toggle-model-remove" checked />
-            <span data-i18n="modelRemoveBtn">모델 제거 버튼</span>
-          </label>
-        </div>
         <div class="btn-row">
           <button id="btn-reset-view" class="btn" data-i18n="resetView">뷰 초기화</button>
           <button id="btn-fit" class="btn" data-i18n="fitView">맞춤 보기</button>
@@ -311,6 +285,15 @@
             </span>
             <span class="dock-tab-label" data-i18n="gridDockLabel">그리드</span>
           </button>
+          <button type="button" id="dock-view-btn" class="dock-tab" aria-label="뷰 설정" aria-expanded="false" aria-controls="dock-view-popup" title="뷰 설정">
+            <span class="dock-tab-thumb">
+              <svg class="dock-tab-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                <circle cx="12" cy="12" r="3"/>
+              </svg>
+            </span>
+            <span class="dock-tab-label" data-i18n="viewDockLabel">뷰</span>
+          </button>
           <button type="button" id="dock-misc-btn" class="dock-tab" aria-label="기타 설정" aria-expanded="false" aria-controls="dock-misc-popup" title="기타 설정">
             <span class="dock-tab-thumb">
               <svg class="dock-tab-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
@@ -330,7 +313,7 @@
       <button type="button" id="space-travel-exit" class="space-travel-exit hidden" data-i18n="bgSpaceTravelExit" data-i18n-title="bgSpaceTravelExitTitle" title="복귀 (Esc)">복귀</button>
 
       <div id="dock-chat-popup" class="dock-popup hidden" role="dialog" aria-label="Visitor chat">
-        <header class="dock-popup-header">
+        <header class="dock-popup-header dock-popup-drag-handle">
           <h3 class="dock-popup-title" data-i18n="chatTitle">방문자 메시지</h3>
           <div class="dock-popup-actions">
             <button type="button" id="visitor-chat-clear" class="dock-text-btn" data-i18n="chatClear">지우기</button>
@@ -353,7 +336,7 @@
       </div>
 
       <div id="dock-bg-popup" class="dock-popup dock-popup-wide hidden" role="dialog" aria-label="Black hole background">
-        <header class="dock-popup-header">
+        <header class="dock-popup-header dock-popup-drag-handle">
           <h3 class="dock-popup-title" data-i18n="bgParamsTitle">블랙홀 배경</h3>
           <button type="button" class="dock-popup-close" aria-label="닫기">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
@@ -363,7 +346,7 @@
       </div>
 
       <div id="dock-settings-popup" class="dock-popup dock-popup-wide hidden" role="dialog" aria-label="Background settings">
-        <header class="dock-popup-header">
+        <header class="dock-popup-header dock-popup-drag-handle">
           <h3 class="dock-popup-title" data-i18n="bgSettingsTitle">배경 설정</h3>
           <button type="button" class="dock-popup-close" aria-label="닫기">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
@@ -373,7 +356,7 @@
       </div>
 
       <div id="dock-grid-popup" class="dock-popup hidden" role="dialog" aria-label="Grid plane settings">
-        <header class="dock-popup-header">
+        <header class="dock-popup-header dock-popup-drag-handle">
           <h3 class="dock-popup-title" data-i18n="gridSettingsTitle">그리드 평면</h3>
           <button type="button" class="dock-popup-close" aria-label="닫기">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
@@ -395,8 +378,45 @@
         </div>
       </div>
 
+      <div id="dock-view-popup" class="dock-popup hidden" role="dialog" aria-label="View settings">
+        <header class="dock-popup-header dock-popup-drag-handle">
+          <h3 class="dock-popup-title" data-i18n="viewSettings">뷰 설정</h3>
+          <button type="button" class="dock-popup-close" aria-label="닫기">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+          </button>
+        </header>
+        <div class="dock-popup-body dock-panel-form">
+          <div class="controls-grid dock-controls-grid">
+            <label class="toggle">
+              <input type="checkbox" id="toggle-axes" checked />
+              <span data-i18n="axes">축 표시</span>
+            </label>
+            <label class="toggle">
+              <input type="checkbox" id="toggle-wireframe" />
+              <span data-i18n="wireframe">와이어프레임</span>
+            </label>
+            <label class="toggle">
+              <input type="checkbox" id="toggle-auto-rotate" />
+              <span data-i18n="autoRotate">자동 회전</span>
+            </label>
+            <label class="toggle">
+              <input type="checkbox" id="toggle-cad-text" checked />
+              <span data-i18n="cadText">도면 텍스트</span>
+            </label>
+            <label class="toggle">
+              <input type="checkbox" id="toggle-empty-hint" checked />
+              <span data-i18n="emptyLoadHint">불러오기 안내</span>
+            </label>
+            <label class="toggle">
+              <input type="checkbox" id="toggle-model-remove" checked />
+              <span data-i18n="modelRemoveBtn">모델 제거 버튼</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
       <div id="dock-misc-popup" class="dock-popup hidden" role="dialog" aria-label="Other settings">
-        <header class="dock-popup-header">
+        <header class="dock-popup-header dock-popup-drag-handle">
           <h3 class="dock-popup-title" data-i18n="miscSettingsTitle">기타 설정</h3>
           <button type="button" class="dock-popup-close" aria-label="닫기">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
@@ -585,7 +605,7 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/occt-import-js@0.0.23/dist/occt-import-js.js"></script>
-  <script type="module" src="i18n-boot.js?v=2.7.9"></script>
-  <script type="module" src="app.js?v=2.7.9"></script>
+  <script type="module" src="i18n-boot.js?v=2.8.0"></script>
+  <script type="module" src="app.js?v=2.8.0"></script>
 </body>
 </html>

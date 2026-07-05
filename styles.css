@@ -1233,6 +1233,11 @@ html, body {
   display: none;
 }
 
+.dock-popup-positioned {
+  bottom: auto;
+  transform: none;
+}
+
 .dock-popup-wide {
   max-height: min(520px, 62vh);
 }
@@ -1245,6 +1250,21 @@ html, body {
   padding: 12px 14px;
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
+}
+
+.dock-popup-drag-handle {
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.dock-popup-drag-handle.dock-dragging {
+  cursor: grabbing;
+}
+
+.dock-popup-drag-handle .dock-popup-title {
+  flex: 1;
+  min-width: 0;
 }
 
 .dock-popup-title {
@@ -1317,6 +1337,11 @@ html, body {
 
 .dock-panel-form .toggle {
   margin-bottom: 0;
+}
+
+.dock-controls-grid {
+  margin-bottom: 0;
+  width: 100%;
 }
 
 /* Visitor chat (inside popup) */
