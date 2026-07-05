@@ -238,7 +238,7 @@ export function initViewportDock({
 
   document.addEventListener('click', (e) => {
     const t = e.target;
-    if (t instanceof Element && t.closest('.viewport-dock, .dock-popup, .space-travel-exit')) return;
+    if (t instanceof Element && t.closest('.viewport-dock, .dock-popup, .space-travel-exit, .sidebar-dock, .sidebar-popup')) return;
     closeAll();
     chatApi?.setExpanded?.(false);
   });

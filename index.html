@@ -20,34 +20,86 @@
 </head>
 <body>
   <div id="app">
-    <aside class="sidebar">
-      <header class="sidebar-header">
-        <div class="logo">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-            <path d="M12 2L2 7l10 5 10-5-10-5z"/>
-            <path d="M2 17l10 5 10-5"/>
-            <path d="M2 12l10 5 10-5"/>
-          </svg>
-          <div>
-            <h1>3D Viewer</h1>
-            <p>STEP · STL · 3MF · 3DM · DXF · DWG · AI <span id="app-version" class="app-version"></span></p>
-          </div>
-        </div>
-        <div class="lang-select-group">
-          <label for="lang-select" data-i18n="language">언어</label>
-          <select id="lang-select" class="select-input lang-select">
-            <option value="ko">한국어</option>
-            <option value="en">English</option>
-            <option value="zh">简体中文</option>
-            <option value="es">Español</option>
-            <option value="ar">العربية</option>
-            <option value="hi">हिन्दी</option>
-          </select>
-        </div>
-      </header>
+    <aside class="sidebar-dock" id="sidebar-dock" aria-label="Main tools">
+      <div class="sidebar-dock-brand" title="3D Viewer">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+          <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+          <path d="M2 17l10 5 10-5"/>
+          <path d="M2 12l10 5 10-5"/>
+        </svg>
+        <span id="app-version" class="app-version sidebar-version"></span>
+      </div>
+      <nav class="sidebar-dock-list">
+        <button type="button" id="sidebar-file-btn" class="dock-tab" aria-label="파일 열기" aria-expanded="false" aria-controls="sidebar-file-popup" title="파일 열기">
+          <span class="dock-tab-thumb">
+            <svg class="dock-tab-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+            </svg>
+          </span>
+          <span class="dock-tab-label" data-i18n="fileDockLabel">파일</span>
+        </button>
+        <button type="button" id="sidebar-view-btn" class="dock-tab" aria-label="뷰 설정" aria-expanded="false" aria-controls="sidebar-view-popup" title="뷰 설정">
+          <span class="dock-tab-thumb">
+            <svg class="dock-tab-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
+            </svg>
+          </span>
+          <span class="dock-tab-label" data-i18n="sidebarViewDockLabel">뷰</span>
+        </button>
+        <button type="button" id="sidebar-tools-btn" class="dock-tab" aria-label="뷰어 도구" aria-expanded="false" aria-controls="sidebar-tools-popup" title="뷰어 도구">
+          <span class="dock-tab-thumb">
+            <svg class="dock-tab-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+              <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+            </svg>
+          </span>
+          <span class="dock-tab-label" data-i18n="toolsDockLabel">도구</span>
+        </button>
+        <button type="button" id="sidebar-tree-btn" class="dock-tab hidden" aria-label="파트 트리" aria-expanded="false" aria-controls="sidebar-tree-popup" title="파트 트리">
+          <span class="dock-tab-thumb">
+            <svg class="dock-tab-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+              <line x1="8" y1="6" x2="21" y2="6"/>
+              <line x1="8" y1="12" x2="21" y2="12"/>
+              <line x1="8" y1="18" x2="21" y2="18"/>
+              <line x1="3" y1="6" x2="3.01" y2="6"/>
+              <line x1="3" y1="12" x2="3.01" y2="12"/>
+              <line x1="3" y1="18" x2="3.01" y2="18"/>
+            </svg>
+          </span>
+          <span class="dock-tab-label" data-i18n="treeDockLabel">트리</span>
+        </button>
+        <button type="button" id="sidebar-info-btn" class="dock-tab" aria-label="모델 정보" aria-expanded="false" aria-controls="sidebar-info-popup" title="모델 정보">
+          <span class="dock-tab-thumb">
+            <svg class="dock-tab-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="12" y1="16" x2="12" y2="12"/>
+              <line x1="12" y1="8" x2="12.01" y2="8"/>
+            </svg>
+          </span>
+          <span class="dock-tab-label" data-i18n="infoDockLabel">정보</span>
+        </button>
+        <span class="dock-group-sep dock-group-sep-v" aria-hidden="true"></span>
+        <button type="button" id="sidebar-lang-btn" class="dock-tab" aria-label="언어" aria-expanded="false" aria-controls="sidebar-lang-popup" title="언어">
+          <span class="dock-tab-thumb">
+            <svg class="dock-tab-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="2" y1="12" x2="22" y2="12"/>
+              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+            </svg>
+          </span>
+          <span class="dock-tab-label" data-i18n="langDockLabel">언어</span>
+        </button>
+      </nav>
+    </aside>
 
-      <section class="panel">
-        <h2 data-i18n="openFileSection">파일 열기</h2>
+    <div id="sidebar-file-popup" class="sidebar-popup dock-popup dock-popup-wide hidden" role="dialog" aria-label="Open file">
+      <header class="dock-popup-header dock-popup-drag-handle">
+        <h3 class="dock-popup-title" data-i18n="openFileSection">파일 열기</h3>
+        <button type="button" class="dock-popup-close" aria-label="닫기">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+      </header>
+      <div class="dock-popup-body dock-panel-form sidebar-panel-body">
         <label id="drop-zone" class="drop-zone" for="file-input">
           <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
@@ -106,10 +158,17 @@
             </button>
           </div>
         </div>
-      </section>
+      </div>
+    </div>
 
-      <section class="panel">
-        <h2 data-i18n="viewSettings">뷰 설정</h2>
+    <div id="sidebar-view-popup" class="sidebar-popup dock-popup hidden" role="dialog" aria-label="View settings">
+      <header class="dock-popup-header dock-popup-drag-handle">
+        <h3 class="dock-popup-title" data-i18n="viewSettings">뷰 설정</h3>
+        <button type="button" class="dock-popup-close" aria-label="닫기">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+      </header>
+      <div class="dock-popup-body dock-panel-form">
         <div class="btn-row">
           <button id="btn-reset-view" class="btn" data-i18n="resetView">뷰 초기화</button>
           <button id="btn-fit" class="btn" data-i18n="fitView">맞춤 보기</button>
@@ -126,10 +185,17 @@
           </button>
           <input type="hidden" id="model-color" value="#6b9bd1" />
         </div>
-      </section>
+      </div>
+    </div>
 
-      <section class="panel">
-        <h2 data-i18n="viewerTools">뷰어 도구</h2>
+    <div id="sidebar-tools-popup" class="sidebar-popup dock-popup dock-popup-wide hidden" role="dialog" aria-label="Viewer tools">
+      <header class="dock-popup-header dock-popup-drag-handle">
+        <h3 class="dock-popup-title" data-i18n="viewerTools">뷰어 도구</h3>
+        <button type="button" class="dock-popup-close" aria-label="닫기">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+      </header>
+      <div class="dock-popup-body dock-panel-form sidebar-panel-body">
         <div class="view-btn-grid">
           <button type="button" id="btn-view-top" class="btn btn-sm" data-i18n="viewTop">평면</button>
           <button type="button" id="btn-view-front" class="btn btn-sm" data-i18n="viewFront">정면</button>
@@ -197,30 +263,65 @@
             <input type="range" id="section-pos" min="0" max="100" value="50" />
           </div>
         </div>
-      </section>
+      </div>
+    </div>
 
-      <section id="tree-panel" class="panel hidden">
-        <h2 id="tree-panel-title" data-i18n="partTree">파트 트리</h2>
-        <div id="tree-list" class="tree-list"></div>
-      </section>
+    <div id="sidebar-tree-popup" class="sidebar-popup dock-popup dock-popup-wide hidden" role="dialog" aria-label="Part tree">
+      <header class="dock-popup-header dock-popup-drag-handle">
+        <h3 id="tree-panel-title" class="dock-popup-title" data-i18n="partTree">파트 트리</h3>
+        <button type="button" class="dock-popup-close" aria-label="닫기">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+      </header>
+      <div class="dock-popup-body sidebar-panel-body">
+        <div id="tree-panel" class="tree-panel-inner">
+          <div id="tree-list" class="tree-list"></div>
+        </div>
+      </div>
+    </div>
 
-      <section class="panel">
-        <h2 data-i18n="modelInfo">모델 정보</h2>
+    <div id="sidebar-info-popup" class="sidebar-popup dock-popup hidden" role="dialog" aria-label="Model info">
+      <header class="dock-popup-header dock-popup-drag-handle">
+        <h3 class="dock-popup-title" data-i18n="modelInfo">모델 정보</h3>
+        <button type="button" class="dock-popup-close" aria-label="닫기">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+      </header>
+      <div class="dock-popup-body dock-panel-form">
         <dl class="stats" id="stats">
           <div><dt data-i18n="statVertices">정점</dt><dd id="stat-vertices">—</dd></div>
           <div><dt data-i18n="statTriangles">삼각형</dt><dd id="stat-triangles">—</dd></div>
           <div><dt data-i18n="statMeshes">메시</dt><dd id="stat-meshes">—</dd></div>
           <div><dt data-i18n="statSize">크기 (mm)</dt><dd id="stat-size">—</dd></div>
         </dl>
-      </section>
+      </div>
+    </div>
 
-      <footer class="sidebar-footer">
-        <p data-i18n="footerControls">마우스: 회전 · 우클릭: 이동 · 휠: 확대/축소</p>
+    <div id="sidebar-lang-popup" class="sidebar-popup dock-popup hidden" role="dialog" aria-label="Language">
+      <header class="dock-popup-header dock-popup-drag-handle">
+        <h3 class="dock-popup-title" data-i18n="language">언어</h3>
+        <button type="button" class="dock-popup-close" aria-label="닫기">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+      </header>
+      <div class="dock-popup-body dock-panel-form">
+        <div class="lang-select-group lang-select-popup">
+          <label for="lang-select" data-i18n="language">언어</label>
+          <select id="lang-select" class="select-input lang-select">
+            <option value="ko">한국어</option>
+            <option value="en">English</option>
+            <option value="zh">简体中文</option>
+            <option value="es">Español</option>
+            <option value="ar">العربية</option>
+            <option value="hi">हिन्दी</option>
+          </select>
+        </div>
+        <p class="sidebar-footer-note" data-i18n="footerControls">마우스: 회전 · 우클릭: 이동 · 휠: 확대/축소</p>
         <p class="sidebar-contact">
           <a href="mailto:seminesman@gmail.com">seminesman@gmail.com</a>
         </p>
-      </footer>
-    </aside>
+      </div>
+    </div>
 
     <main class="viewport">
       <nav id="model-tabs" class="model-tabs hidden" aria-label="Open models">
@@ -605,7 +706,7 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/occt-import-js@0.0.23/dist/occt-import-js.js"></script>
-  <script type="module" src="i18n-boot.js?v=2.8.0"></script>
-  <script type="module" src="app.js?v=2.8.0"></script>
+  <script type="module" src="i18n-boot.js?v=2.9.0"></script>
+  <script type="module" src="app.js?v=2.9.0"></script>
 </body>
 </html>

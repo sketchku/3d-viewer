@@ -23,10 +23,14 @@ function readLayerColor(object, fallback = '#e8eaed') {
 export function initPartTree({
   modelGroup, getModelRoot, t, THREE, openColorPicker, onSelectObject,
 }) {
-  const panel = document.getElementById('tree-panel');
+  const treeBtn = document.getElementById('sidebar-tree-btn');
   const title = document.getElementById('tree-panel-title');
   const list = document.getElementById('tree-list');
-  if (!panel || !list) return { refresh: () => {}, clear: () => {} };
+  if (!list) return { refresh: () => {}, clear: () => {} };
+
+  function setTreeVisible(visible) {
+    treeBtn?.classList.toggle('hidden', !visible);
+  }
 
   const Color = THREE?.Color;
   const root = () => getModelRoot?.() || modelGroup;
@@ -57,7 +61,7 @@ export function initPartTree({
 
   function clear() {
     list.innerHTML = '';
-    panel.classList.add('hidden');
+    setTreeVisible(false);
   }
 
   function makeLayerEntry(child) {
@@ -135,17 +139,17 @@ export function initPartTree({
   function refresh(mode = 'parts') {
     list.innerHTML = '';
     if (root().children.length === 0) {
-      panel.classList.add('hidden');
+      setTreeVisible(false);
       return;
     }
 
     const entries = buildEntries(mode);
     if (!entries.length) {
-      panel.classList.add('hidden');
+      setTreeVisible(false);
       return;
     }
 
-    panel.classList.remove('hidden');
+    setTreeVisible(true);
     if (title) {
       title.textContent = mode === 'layers' ? t('layerPanel') : t('partTree');
       title.dataset.i18n = mode === 'layers' ? 'layerPanel' : 'partTree';
