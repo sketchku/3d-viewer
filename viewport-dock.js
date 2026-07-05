@@ -34,9 +34,13 @@ export function initViewportDock({
   const chatBtn = document.getElementById('dock-chat-btn');
   const bgBtn = document.getElementById('dock-bg-btn');
   const settingsBtn = document.getElementById('dock-settings-btn');
+  const gridBtn = document.getElementById('dock-grid-btn');
+  const miscBtn = document.getElementById('dock-misc-btn');
   const chatPopup = document.getElementById('dock-chat-popup');
   const bgPopup = document.getElementById('dock-bg-popup');
   const settingsPopup = document.getElementById('dock-settings-popup');
+  const gridPopup = document.getElementById('dock-grid-popup');
+  const miscPopup = document.getElementById('dock-misc-popup');
 
   const bgMount = document.getElementById('bg-pixels-controls');
   const settingsMount = document.getElementById('bg-settings-controls');
@@ -70,6 +74,8 @@ export function initViewportDock({
     { popup: chatPopup, btn: chatBtn, id: 'chat' },
     { popup: bgPopup, btn: bgBtn, id: 'bg' },
     { popup: settingsPopup, btn: settingsBtn, id: 'settings' },
+    { popup: gridPopup, btn: gridBtn, id: 'grid' },
+    { popup: miscPopup, btn: miscBtn, id: 'misc' },
   ];
 
   function closeAll(exceptId) {
@@ -112,6 +118,22 @@ export function initViewportDock({
     } else {
       closePopup(settingsPopup, settingsBtn);
     }
+  });
+
+  gridBtn?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const open = gridPopup?.classList.contains('hidden');
+    closeAll(open ? 'grid' : null);
+    if (open) openPopup(gridPopup, gridBtn);
+    else closePopup(gridPopup, gridBtn);
+  });
+
+  miscBtn?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const open = miscPopup?.classList.contains('hidden');
+    closeAll(open ? 'misc' : null);
+    if (open) openPopup(miscPopup, miscBtn);
+    else closePopup(miscPopup, miscBtn);
   });
 
   for (const { popup } of popups) {
