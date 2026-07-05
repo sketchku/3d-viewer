@@ -1200,14 +1200,18 @@ html, body {
 /* Dock popups */
 .dock-popup {
   position: absolute;
-  left: 12px;
-  right: 12px;
+  left: 50%;
+  right: auto;
   bottom: 86px;
+  transform: translateX(-50%);
+  width: 40%;
+  min-width: 280px;
+  max-width: 520px;
   z-index: 13;
   max-height: min(420px, 52vh);
   display: flex;
   flex-direction: column;
-  background: rgba(15, 17, 23, 0.96);
+  background: rgba(15, 17, 23, 0.92);
   border: 1px solid var(--border);
   border-radius: 14px;
   backdrop-filter: blur(12px);
@@ -1824,6 +1828,11 @@ body.is-loading {
     max-height: 45vh;
     border-right: none;
     border-bottom: 1px solid var(--border);
+  }
+
+  .dock-popup {
+    width: min(72%, 360px);
+    min-width: 0;
   }
 }
 
