@@ -200,7 +200,7 @@ export function initSidebarDock(opts = {}) {
   dock?.addEventListener('click', (e) => e.stopPropagation());
 
   const brandBtn = document.getElementById('sidebar-brand-btn');
-  const brandIcon = brandBtn?.querySelector('.brand-refresh-icon');
+  const brandIcon = brandBtn?.querySelector('.brand-app-mark');
   brandBtn?.addEventListener('click', (e) => {
     e.stopPropagation();
     closeAll();

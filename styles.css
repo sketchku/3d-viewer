@@ -101,34 +101,55 @@ html, body {
   background: rgba(79, 143, 247, 0.08);
 }
 
-.sidebar-dock-brand:active .brand-refresh-icon {
-  animation-duration: 0.45s;
+.brand-app-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  perspective: 120px;
 }
 
-.brand-refresh-icon {
+.brand-app-mark {
   display: block;
-  animation: brand-icon-spin 2.8s linear infinite;
-  transform-origin: center;
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(47, 111, 224, 0.35);
+  animation: brand-icon-spin 6s linear infinite;
+  transform-origin: center center;
 }
 
-.brand-refresh-icon.spin-once {
-  animation: brand-icon-spin-once 0.5s ease-in-out;
+.brand-app-mark.spin-once {
+  animation: brand-icon-spin-once 0.55s ease-in-out;
+}
+
+.sidebar-dock-brand:active .brand-app-mark:not(.spin-once) {
+  animation-duration: 1.2s;
 }
 
 @keyframes brand-icon-spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from { transform: rotateY(0deg); }
+  to { transform: rotateY(360deg); }
 }
 
 @keyframes brand-icon-spin-once {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from { transform: rotateY(0deg) scale(1); }
+  50% { transform: rotateY(180deg) scale(0.92); }
+  to { transform: rotateY(360deg) scale(1); }
 }
 
 .sidebar-version {
   margin-inline-start: 0;
-  font-size: 0.52rem;
-  padding: 1px 4px;
+  margin-top: 2px;
+  font-size: 0.54rem;
+  font-weight: 700;
+  padding: 2px 5px;
+  letter-spacing: 0.03em;
+  color: var(--accent);
+  background: rgba(79, 143, 247, 0.12);
+  border: 1px solid rgba(79, 143, 247, 0.28);
+  border-radius: 4px;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
 }
 
 .sidebar-dock-list {

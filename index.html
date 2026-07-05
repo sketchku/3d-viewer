@@ -21,12 +21,37 @@
 <body>
   <div id="app">
     <aside class="sidebar-dock" id="sidebar-dock" aria-label="Main tools">
-      <button type="button" id="sidebar-brand-btn" class="sidebar-dock-brand" data-i18n="brandRefreshTitle" data-i18n-title="brandRefreshTitle" title="새로고침">
-        <svg class="brand-refresh-icon" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M21 12a9 9 0 1 1-2.64-6.36"/>
-          <polyline points="21 3 21 9 15 9"/>
-        </svg>
-        <span id="app-version" class="app-version sidebar-version"></span>
+      <button type="button" id="sidebar-brand-btn" class="sidebar-dock-brand" data-i18n-title="brandRefreshTitle" title="새로고침" aria-label="새로고침">
+        <span class="brand-app-icon" aria-hidden="true">
+          <svg class="brand-app-mark" width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="brand-icon-bg" x1="4" y1="4" x2="36" y2="36" gradientUnits="userSpaceOnUse">
+                <stop stop-color="#5b9cf5"/>
+                <stop offset="1" stop-color="#2d5fbf"/>
+              </linearGradient>
+              <linearGradient id="brand-face-top" x1="12" y1="10" x2="28" y2="18" gradientUnits="userSpaceOnUse">
+                <stop stop-color="#e8f1ff"/>
+                <stop offset="1" stop-color="#b8d4ff"/>
+              </linearGradient>
+              <linearGradient id="brand-face-left" x1="8" y1="18" x2="20" y2="32" gradientUnits="userSpaceOnUse">
+                <stop stop-color="#8eb8f7"/>
+                <stop offset="1" stop-color="#4f8ff7"/>
+              </linearGradient>
+              <linearGradient id="brand-face-right" x1="20" y1="18" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+                <stop stop-color="#6ba3f5"/>
+                <stop offset="1" stop-color="#3a7ae0"/>
+              </linearGradient>
+            </defs>
+            <rect x="2" y="2" width="36" height="36" rx="10" fill="url(#brand-icon-bg)"/>
+            <path d="M20 9 L30 15 L30 25 L20 31 L10 25 L10 15 Z" fill="rgba(255,255,255,0.12)"/>
+            <path d="M20 9 L30 15 L20 21 L10 15 Z" fill="url(#brand-face-top)" stroke="rgba(255,255,255,0.55)" stroke-width="0.8" stroke-linejoin="round"/>
+            <path d="M10 15 L20 21 L20 31 L10 25 Z" fill="url(#brand-face-left)" stroke="rgba(255,255,255,0.35)" stroke-width="0.8" stroke-linejoin="round"/>
+            <path d="M20 21 L30 15 L30 25 L20 31 Z" fill="url(#brand-face-right)" stroke="rgba(255,255,255,0.4)" stroke-width="0.8" stroke-linejoin="round"/>
+            <path d="M20 9 L30 15 L20 21 L10 15 Z" stroke="rgba(255,255,255,0.75)" stroke-width="1.1" stroke-linejoin="round"/>
+            <circle cx="28" cy="12" r="2.2" fill="#fff" opacity="0.9"/>
+          </svg>
+        </span>
+        <span id="app-version" class="app-version sidebar-version" aria-label="App version"></span>
       </button>
       <nav class="sidebar-dock-list">
         <button type="button" id="sidebar-file-btn" class="dock-tab" aria-label="파일" aria-expanded="false" aria-controls="sidebar-file-popup" title="파일">
@@ -588,7 +613,7 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/occt-import-js@0.0.23/dist/occt-import-js.js"></script>
-  <script type="module" src="i18n-boot.js?v=2.10.1"></script>
-  <script type="module" src="app.js?v=2.10.1"></script>
+  <script type="module" src="i18n-boot.js?v=2.10.2"></script>
+  <script type="module" src="app.js?v=2.10.2"></script>
 </body>
 </html>

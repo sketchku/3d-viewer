@@ -41,7 +41,7 @@ import {
 } from './cad-step-convert.js?v=2.5.0';
 import { isStaticWebDeployment } from './web-config.js?v=2.5.0';
 import { createBgPixels, loadBgFromStorage } from './bg-pixels.js?v=2.10.0';
-import { initSidebarDock } from './sidebar-dock.js?v=2.10.1';
+import { initSidebarDock } from './sidebar-dock.js?v=2.10.2';
 import { initColorPicker } from './color-picker.js?v=2.6.7';
 
 let cad2dModule = null;
