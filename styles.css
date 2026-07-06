@@ -42,11 +42,41 @@ html, body {
   width: 100%;
 }
 
-.space-travel-exit {
+.space-travel-bar {
   position: absolute;
   top: 14px;
   right: 14px;
   z-index: 20;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.space-travel-bar > * {
+  pointer-events: auto;
+}
+
+.space-travel-bar.hidden {
+  display: none;
+}
+
+.space-travel-toolbar {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.st-menu-group {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.st-menu-btn {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -59,7 +89,135 @@ html, body {
   cursor: pointer;
   font-family: var(--font);
   color: inherit;
-  pointer-events: auto;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.st-menu-btn:hover {
+  background: rgba(168, 130, 255, 0.1);
+  border-color: rgba(168, 130, 255, 0.35);
+}
+
+.st-menu-btn.active,
+.st-menu-btn[aria-expanded="true"] {
+  border-color: rgba(168, 130, 255, 0.5);
+  background: rgba(168, 130, 255, 0.14);
+}
+
+.st-menu-thumb {
+  color: #a882ff;
+  border-color: rgba(168, 130, 255, 0.35);
+  background: rgba(15, 17, 23, 0.82);
+  backdrop-filter: blur(6px);
+}
+
+.st-menu-btn:hover .st-menu-thumb,
+.st-menu-btn.active .st-menu-thumb,
+.st-menu-btn[aria-expanded="true"] .st-menu-thumb {
+  color: #c4a8ff;
+  border-color: rgba(168, 130, 255, 0.55);
+  background: rgba(168, 130, 255, 0.12);
+}
+
+.st-menu-label {
+  max-width: 54px;
+  font-size: 0.56rem;
+  line-height: 1.1;
+  color: var(--text-muted);
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.st-menu-btn.active .st-menu-label,
+.st-menu-btn[aria-expanded="true"] .st-menu-label {
+  color: #c4a8ff;
+}
+
+.st-menu-popup {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: calc(var(--st-cascade, 0) * -28px);
+  width: min(320px, 42vw);
+  min-width: 260px;
+  max-height: min(520px, 62vh);
+  display: flex;
+  flex-direction: column;
+  background: rgba(15, 17, 23, 0.94);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+  z-index: 21;
+}
+
+.st-menu-popup.hidden {
+  display: none;
+}
+
+.st-menu-popup-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.st-menu-popup-title {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.st-menu-popup-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.st-menu-popup-close:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.st-menu-popup-body {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.st-menu-popup-body .lab-bg-slot .dock-popup-section-title {
+  display: none;
+}
+
+.st-menu-popup-body .bg-pixels-panel,
+.st-menu-popup-body .bg-settings-panel {
+  padding: 10px 12px 14px;
+}
+
+.space-travel-exit {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  width: 52px;
+  padding: 3px 2px 4px;
+  background: transparent;
+  border: 2px solid transparent;
+  border-radius: 10px;
+  cursor: pointer;
+  font-family: var(--font);
+  color: inherit;
   transition: border-color 0.15s, background 0.15s;
 }
 
@@ -90,9 +248,7 @@ html, body {
   50% { opacity: 0.7; }
 }
 
-.space-travel-exit.hidden {
-  display: none;
-}
+
 
 /* Left sidebar dock (icon rail) */
 .sidebar-dock {
@@ -2121,9 +2277,15 @@ body.is-loading {
   right: calc(var(--sidebar-width) + 10px);
 }
 
-[dir="rtl"] .space-travel-exit {
+[dir="rtl"] .space-travel-bar {
   right: auto;
   left: 14px;
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .st-menu-popup {
+  right: auto;
+  left: calc(var(--st-cascade, 0) * -28px);
 }
 
 [dir="rtl"] .drawing-view-tag.top,

@@ -285,7 +285,7 @@ export function initSidebarDock(opts = {}) {
 
   document.addEventListener('click', (e) => {
     const target = e.target;
-    if (target instanceof Element && target.closest('.sidebar-dock, .sidebar-popup, .space-travel-exit')) return;
+    if (target instanceof Element && target.closest('.sidebar-dock, .sidebar-popup, #space-travel-bar')) return;
     closeAll();
   });
 

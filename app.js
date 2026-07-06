@@ -41,7 +41,8 @@ import {
 } from './cad-step-convert.js?v=2.5.0';
 import { isStaticWebDeployment } from './web-config.js?v=2.5.0';
 import { createBgPixels, loadBgFromStorage } from './bg-pixels.js?v=2.10.0';
-import { initSidebarDock } from './sidebar-dock.js?v=2.10.4';
+import { initSidebarDock } from './sidebar-dock.js?v=2.10.5';
+import { initSpaceTravelUI } from './space-travel-ui.js?v=2.10.5';
 import { initColorPicker } from './color-picker.js?v=2.6.7';
 
 let cad2dModule = null;
@@ -188,11 +189,12 @@ const bgPixels = createBgPixels(
 const viewportEl = canvas.parentElement;
 const appEl = document.getElementById('app');
 const spaceTravelExitBtn = document.getElementById('space-travel-exit');
+const spaceTravelUi = initSpaceTravelUI({ t });
 let sidebarDockApi = null;
 
 function applySpaceTravelMode(on) {
   appEl?.classList.toggle('space-travel-mode', on);
-  spaceTravelExitBtn?.classList.toggle('hidden', !on);
+  spaceTravelUi?.setActive?.(on);
   requestAnimationFrame(() => resize());
 }
 
@@ -207,6 +209,7 @@ spaceTravelExitBtn?.addEventListener('click', () => setSpaceTravelMode(false));
 
 document.addEventListener('keydown', (e) => {
   if (e.key !== 'Escape') return;
+  if (spaceTravelUi?.closeLast?.()) return;
   if (sidebarDockApi?.closeLast?.()) return;
   if (bgPixels.getSettings().spaceTravel) setSpaceTravelMode(false);
 });

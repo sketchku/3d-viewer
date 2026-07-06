@@ -401,10 +401,16 @@
           </form>
           <p id="visitor-chat-hint" class="visitor-chat-hint" data-i18n="chatHintLocal">메시지는 이 브라우저에 저장됩니다.</p>
         </div>
-        <p class="dock-popup-section-title" data-i18n="bgParamsTitle">블랙홀 배경</p>
-        <div id="bg-pixels-controls" class="lab-section-mount"></div>
-        <p class="dock-popup-section-title" data-i18n="bgSettingsTitle">배경 설정</p>
-        <div id="bg-settings-controls" class="lab-section-mount"></div>
+        <div id="lab-bg-slots-anchor">
+          <div id="bg-pixels-slot" class="lab-bg-slot">
+            <p class="dock-popup-section-title" data-i18n="bgParamsTitle">블랙홀 배경</p>
+            <div id="bg-pixels-controls" class="lab-section-mount"></div>
+          </div>
+          <div id="bg-settings-slot" class="lab-bg-slot">
+            <p class="dock-popup-section-title" data-i18n="bgSettingsTitle">배경 설정</p>
+            <div id="bg-settings-controls" class="lab-section-mount"></div>
+          </div>
+        </div>
         <p class="dock-popup-section-title" data-i18n="labUiSection">UI 실험</p>
         <div class="controls-grid dock-controls-grid">
           <label class="toggle">
@@ -424,19 +430,66 @@
       <canvas id="canvas"></canvas>
       <div id="toast" class="toast hidden"></div>
 
-      <button type="button" id="space-travel-exit" class="space-travel-exit hidden" data-i18n-title="bgSpaceTravelExitTitle" data-i18n-aria-label="bgSpaceTravelExit" title="복귀 (Esc)" aria-label="복귀">
-        <span class="dock-tab-thumb space-travel-exit-thumb">
-          <svg class="dock-tab-icon wormhole-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
-            <ellipse cx="12" cy="12" rx="10" ry="6" opacity="0.28"/>
-            <ellipse cx="12" cy="12" rx="8" ry="4.8"/>
-            <ellipse cx="12" cy="12" rx="5.5" ry="3.2" opacity="0.85"/>
-            <ellipse cx="12" cy="12" rx="3" ry="1.7"/>
-            <ellipse cx="12" cy="12" rx="1" ry="0.55" fill="currentColor" stroke="none"/>
-            <path d="M4.5 10.5c2.5-2 5.5-2.8 7.5-2" stroke-linecap="round"/>
-            <path d="M19.5 13.5c-2.5 2-5.5 2.8-7.5 2" stroke-linecap="round"/>
-          </svg>
-        </span>
-      </button>
+      <div id="space-travel-bar" class="space-travel-bar hidden">
+        <div id="space-travel-toolbar" class="space-travel-toolbar" aria-label="Space travel controls">
+          <div class="st-menu-group">
+            <button type="button" id="st-btn-bg-params" class="st-menu-btn" aria-expanded="false" aria-controls="st-popup-bg-params" data-i18n-title="bgParamsTitle" title="블랙홀">
+              <span class="dock-tab-thumb st-menu-thumb">
+                <svg class="dock-tab-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                  <circle cx="12" cy="12" r="3.2"/>
+                  <circle cx="12" cy="12" r="7"/>
+                  <circle cx="12" cy="12" r="10" opacity="0.35"/>
+                </svg>
+              </span>
+              <span class="st-menu-label" data-i18n="bgParamsTitle">블랙홀</span>
+            </button>
+            <div id="st-popup-bg-params" class="st-menu-popup hidden" role="dialog" aria-label="Black hole parameters">
+              <header class="st-menu-popup-header">
+                <h3 class="st-menu-popup-title" data-i18n="bgParamsTitle">블랙홀</h3>
+                <button type="button" class="st-menu-popup-close" aria-label="닫기">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                </button>
+              </header>
+              <div class="st-menu-popup-body" data-slot-host="bg-pixels-slot"></div>
+            </div>
+          </div>
+          <div class="st-menu-group">
+            <button type="button" id="st-btn-bg-settings" class="st-menu-btn" aria-expanded="false" aria-controls="st-popup-bg-settings" data-i18n-title="bgSettingsTitle" title="배경 설정">
+              <span class="dock-tab-thumb st-menu-thumb">
+                <svg class="dock-tab-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                  <line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/>
+                  <line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/>
+                  <line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/>
+                  <line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/>
+                </svg>
+              </span>
+              <span class="st-menu-label" data-i18n="bgSettingsTitle">배경 설정</span>
+            </button>
+            <div id="st-popup-bg-settings" class="st-menu-popup hidden" role="dialog" aria-label="Background settings">
+              <header class="st-menu-popup-header">
+                <h3 class="st-menu-popup-title" data-i18n="bgSettingsTitle">배경 설정</h3>
+                <button type="button" class="st-menu-popup-close" aria-label="닫기">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                </button>
+              </header>
+              <div class="st-menu-popup-body" data-slot-host="bg-settings-slot"></div>
+            </div>
+          </div>
+        </div>
+        <button type="button" id="space-travel-exit" class="space-travel-exit" data-i18n-title="bgSpaceTravelExitTitle" data-i18n-aria-label="bgSpaceTravelExit" title="복귀 (Esc)" aria-label="복귀">
+          <span class="dock-tab-thumb space-travel-exit-thumb">
+            <svg class="dock-tab-icon wormhole-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+              <ellipse cx="12" cy="12" rx="10" ry="6" opacity="0.28"/>
+              <ellipse cx="12" cy="12" rx="8" ry="4.8"/>
+              <ellipse cx="12" cy="12" rx="5.5" ry="3.2" opacity="0.85"/>
+              <ellipse cx="12" cy="12" rx="3" ry="1.7"/>
+              <ellipse cx="12" cy="12" rx="1" ry="0.55" fill="currentColor" stroke="none"/>
+              <path d="M4.5 10.5c2.5-2 5.5-2.8 7.5-2" stroke-linecap="round"/>
+              <path d="M19.5 13.5c-2.5 2-5.5 2.8-7.5 2" stroke-linecap="round"/>
+            </svg>
+          </span>
+        </button>
+      </div>
     </main>
 
     <div id="loading" class="loading-screen hidden" aria-live="polite" aria-busy="false">
@@ -609,7 +662,7 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/occt-import-js@0.0.23/dist/occt-import-js.js"></script>
-  <script type="module" src="i18n-boot.js?v=2.10.4"></script>
-  <script type="module" src="app.js?v=2.10.4"></script>
+  <script type="module" src="i18n-boot.js?v=2.10.5"></script>
+  <script type="module" src="app.js?v=2.10.5"></script>
 </body>
 </html>
