@@ -167,13 +167,35 @@ export function initEditTools({
     updateSelectionUI();
   }
 
+  function getAxisStep() {
+    return Math.max(getModelSpan() * 0.025, 0.05);
+  }
+
+  function moveSelectedAlongAxis(axis, direction, step) {
+    if (!editMode || selected.size === 0) return false;
+    const delta = (step ?? getAxisStep()) * direction;
+    const ax = axis.toLowerCase();
+    if (ax !== 'x' && ax !== 'y' && ax !== 'z') return false;
+    for (const obj of selected) {
+      if (obj.userData?.nonSelectable) continue;
+      obj.position[ax] += delta;
+    }
+    onStructureChange?.();
+    return true;
+  }
+
   function updateSelectionUI() {
     const panel = document.getElementById('edit-selection-panel');
     const label = document.getElementById('edit-selection-label');
     const btnDelete = document.getElementById('btn-delete-selected');
+    const axisPanel = document.getElementById('edit-axis-move');
     const count = selected.size;
     if (panel) panel.classList.toggle('hidden', !editMode || count === 0);
+    if (axisPanel) axisPanel.classList.toggle('hidden', !editMode || count === 0);
     if (btnDelete) btnDelete.disabled = count === 0;
+    axisPanel?.querySelectorAll('.edit-axis-btn').forEach((btn) => {
+      btn.disabled = count === 0;
+    });
     if (label) {
       if (count === 0) label.textContent = t('editNothingSelected');
       else if (count === 1) {
@@ -362,15 +384,40 @@ export function initEditTools({
 
     document.getElementById('btn-delete-selected')?.addEventListener('click', deleteSelected);
 
+    document.getElementById('edit-axis-move')?.addEventListener('click', (e) => {
+      const btn = e.target.closest('.edit-axis-btn');
+      if (!btn || btn.disabled) return;
+      const axis = btn.dataset.axis;
+      const direction = Number(btn.dataset.dir);
+      if (!axis || !direction) return;
+      if (moveSelectedAlongAxis(axis, direction)) {
+        showToast(t('editMoved'), 'success');
+      }
+    });
+
     document.addEventListener('keydown', (e) => {
       if (!editMode || selected.size === 0) return;
+      const tag = document.activeElement?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
       if (e.key === 'Delete' || e.key === 'Backspace') {
-        const tag = document.activeElement?.tagName;
-        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
         e.preventDefault();
         deleteSelected();
       }
       if (e.key === 'Escape') clearSelection();
+      const keyAxis = {
+        ArrowLeft: ['x', -1],
+        ArrowRight: ['x', 1],
+        ArrowUp: ['y', 1],
+        ArrowDown: ['y', -1],
+        PageUp: ['z', 1],
+        PageDown: ['z', -1],
+      }[e.key];
+      if (keyAxis) {
+        e.preventDefault();
+        if (moveSelectedAlongAxis(keyAxis[0], keyAxis[1])) {
+          showToast(t('editMoved'), 'success');
+        }
+      }
     });
 
     canvas.addEventListener('pointerdown', onPointerDown);
@@ -396,6 +443,7 @@ export function initEditTools({
       else setSelection([found]);
     },
     getSelectedUuids: () => [...selected].map((o) => o.uuid),
+    moveSelectedAlongAxis,
     isEditMode: () => editMode,
     onModelLoaded() {
       clearSelection();

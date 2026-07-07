@@ -281,6 +281,21 @@
             <span id="edit-selection-label" class="edit-selection-label">—</span>
             <button type="button" id="btn-delete-selected" class="btn btn-sm btn-danger" data-i18n="editDelete">삭제</button>
           </div>
+          <div id="edit-axis-move" class="edit-axis-move hidden">
+            <span class="edit-axis-move-label" data-i18n="editAxisMoveLabel">축 이동</span>
+            <div class="edit-axis-pad" role="group" aria-label="Axis move">
+              <button type="button" class="edit-axis-btn" data-axis="y" data-dir="1" title="Y+" aria-label="Y+">▲</button>
+              <button type="button" class="edit-axis-btn" data-axis="x" data-dir="-1" title="X−" aria-label="X−">◀</button>
+              <span class="edit-axis-center" aria-hidden="true">·</span>
+              <button type="button" class="edit-axis-btn" data-axis="x" data-dir="1" title="X+" aria-label="X+">▶</button>
+              <button type="button" class="edit-axis-btn" data-axis="y" data-dir="-1" title="Y−" aria-label="Y−">▼</button>
+            </div>
+            <div class="edit-axis-z-row">
+              <button type="button" class="edit-axis-btn edit-axis-z" data-axis="z" data-dir="-1" data-i18n="editAxisZMinus">Z−</button>
+              <button type="button" class="edit-axis-btn edit-axis-z" data-axis="z" data-dir="1" data-i18n="editAxisZPlus">Z+</button>
+            </div>
+            <p class="edit-axis-hint" data-i18n="editAxisMoveHint">방향 버튼 또는 화살표 키로 한 축만 이동 (Z: PgUp/PgDn)</p>
+          </div>
         </div>
         <div id="measure-controls" class="measure-controls hidden">
           <div class="select-group">
@@ -657,7 +672,7 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/occt-import-js@0.0.23/dist/occt-import-js.js"></script>
-  <script type="module" src="i18n-boot.js?v=2.12.1"></script>
-  <script type="module" src="app.js?v=2.12.1"></script>
+  <script type="module" src="i18n-boot.js?v=2.12.2"></script>
+  <script type="module" src="app.js?v=2.12.2"></script>
 </body>
 </html>
