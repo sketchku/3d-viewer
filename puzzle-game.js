@@ -49,7 +49,7 @@ function pickPartCount(total, difficulty) {
 }
 
 function scatterOffset(span, difficulty, THREE) {
-  const factor = difficulty === 'easy' ? 0.28 : difficulty === 'hard' ? 0.72 : 0.48;
+  const factor = difficulty === 'easy' ? 0.42 : difficulty === 'hard' ? 0.95 : 0.65;
   const r = span * factor;
   return new THREE.Vector3(
     (Math.random() - 0.5) * 2 * r,
@@ -352,31 +352,36 @@ export function initPuzzleGame({
   }
 
   function preparePuzzleParts(root) {
-    let allParts = collectParts(root);
+    const splitCount = pickSplitCount(difficulty);
+    const targets = findSplittableMeshes(root);
+    if (!targets.length) return { parts: [], split: false };
 
-    if (allParts.length < 2) {
-      const targets = findSplittableMeshes(root);
-      if (!targets.length) return { parts: [], split: false };
+    showToast(t('puzzleSplitting', { count: splitCount }), 'info');
+    splitSession = createSplitSession({
+      THREE,
+      root,
+      meshes: [targets[0]],
+      partCount: splitCount,
+      label: t,
+      hideOthers: targets.slice(1),
+    });
 
-      const splitCount = pickSplitCount(difficulty);
-      showToast(t('puzzleSplitting', { count: splitCount }), 'info');
-      splitSession = createSplitSession({
-        THREE,
-        root,
-        meshes: targets,
-        partCount: splitCount,
-        label: t,
-      });
-
-      if (!splitSession) return { parts: [], split: false };
-
-      allParts = collectParts(root);
-      onPartsChanged();
-      return { parts: allParts, split: true };
+    if (splitSession) {
+      const splitParts = collectParts(root).filter((p) => p.userData?.puzzleSplitPart);
+      if (splitParts.length >= 2) {
+        onPartsChanged();
+        return { parts: splitParts, split: true };
+      }
+      clearSplitSession();
     }
 
-    const count = pickPartCount(allParts.length, difficulty);
-    return { parts: shuffle(allParts).slice(0, count), split: false };
+    const allParts = collectParts(root);
+    if (allParts.length >= 2) {
+      const count = Math.min(pickPartCount(allParts.length, difficulty), allParts.length);
+      return { parts: shuffle(allParts).slice(0, count), split: false };
+    }
+
+    return { parts: [], split: false };
   }
 
   function scatterPartsFromSolved(parts) {

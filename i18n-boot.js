@@ -1,5 +1,5 @@
-import { initI18n } from './i18n.js?v=2.12.0';
-import { APP_VERSION } from './version.js?v=2.12.0';
+import { initI18n } from './i18n.js?v=2.12.1';
+import { APP_VERSION } from './version.js?v=2.12.1';
 
 initI18n();
 

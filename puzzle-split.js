@@ -199,13 +199,21 @@ export function splitMeshForPuzzle(THREE, mesh, partCount, label) {
       geo.setAttribute('color', new THREE.Float32BufferAttribute(bucket.col, 3));
     }
 
+    geo.computeBoundingBox();
+    const pieceCenter = new THREE.Vector3();
+    geo.boundingBox.getCenter(pieceCenter);
+    geo.translate(-pieceCenter.x, -pieceCenter.y, -pieceCenter.z);
+
     const partMesh = new THREE.Mesh(geo, mesh.material);
-    partMesh.matrix.copy(mesh.matrix);
-    partMesh.matrix.decompose(partMesh.position, partMesh.quaternion, partMesh.scale);
+    const localOffset = pieceCenter.clone().applyQuaternion(mesh.quaternion);
+    partMesh.position.copy(mesh.position).add(localOffset);
+    partMesh.quaternion.copy(mesh.quaternion);
+    partMesh.scale.copy(mesh.scale);
     partMesh.castShadow = mesh.castShadow;
     partMesh.receiveShadow = mesh.receiveShadow;
     partMesh.userData.partName = label('puzzleSplitPart', { n: partIdx + 1 });
     partMesh.userData.puzzleSplitPart = true;
+    partMesh.userData.puzzleSourceMesh = mesh.uuid;
     parts.push(partMesh);
     partIdx++;
   }
@@ -222,21 +230,40 @@ export function splitMeshForPuzzle(THREE, mesh, partCount, label) {
  *   label: Function,
  * }} opts
  */
-export function createSplitSession({ THREE, root, meshes, partCount, label }) {
+function hideMeshForPuzzle(mesh) {
+  mesh.visible = false;
+  mesh.userData.puzzleSplitHidden = true;
+}
+
+export function createSplitSession({
+  THREE,
+  root,
+  meshes,
+  partCount,
+  label,
+  hideOthers = [],
+}) {
   const sessions = [];
 
   for (const mesh of meshes) {
-    const { parts, triangleCount } = splitMeshForPuzzle(THREE, mesh, partCount, label);
+    const { parts } = splitMeshForPuzzle(THREE, mesh, partCount, label);
     if (parts.length < 2) continue;
 
-    mesh.visible = false;
-    mesh.userData.puzzleSplitHidden = true;
-
+    hideMeshForPuzzle(mesh);
+    const parent = mesh.parent || root;
     for (const part of parts) {
-      root.add(part);
+      parent.add(part);
+      part.updateMatrixWorld(true);
     }
 
-    sessions.push({ original: mesh, parts });
+    const hiddenOthers = [];
+    for (const other of hideOthers) {
+      if (!other || other === mesh || other.userData?.puzzleSplitHidden) continue;
+      hideMeshForPuzzle(other);
+      hiddenOthers.push(other);
+    }
+
+    sessions.push({ original: mesh, parts, hiddenOthers, parent });
   }
 
   return sessions.length ? { sessions, partCount } : null;
@@ -248,9 +275,14 @@ export function createSplitSession({ THREE, root, meshes, partCount, label }) {
 export function restoreSplitSession(sessions) {
   if (!sessions?.length) return;
 
-  for (const { original, parts } of sessions) {
+  for (const { original, parts, hiddenOthers = [] } of sessions) {
     original.visible = true;
     delete original.userData.puzzleSplitHidden;
+
+    for (const other of hiddenOthers) {
+      other.visible = true;
+      delete other.userData.puzzleSplitHidden;
+    }
 
     for (const part of parts) {
       part.parent?.remove(part);
