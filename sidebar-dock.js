@@ -146,19 +146,16 @@ export function initSidebarDock(opts = {}) {
   /** @type {string[]} */
   const openOrder = [];
 
-  let labApi = null;
-  if (bgPixels) {
-    labApi = initLabFeatures({
-      bgPixels,
-      t,
-      showToast,
-      onSpaceTravelChange,
-      THREE,
-      getModelRoot,
-      getIs2d,
-      editToolsMgr,
-    });
-  }
+  const labApi = initLabFeatures({
+    bgPixels,
+    t,
+    showToast,
+    onSpaceTravelChange,
+    THREE,
+    getModelRoot,
+    getIs2d,
+    editToolsMgr,
+  });
 
   function isEntryOpen(entry) {
     return entry?.popup && !entry.popup.classList.contains('hidden');

@@ -50,44 +50,57 @@ function scatterOffset(span, difficulty, THREE) {
   );
 }
 
-function backupEmissive(obj) {
-  if (!obj.material || obj.userData._puzzleEmissive) return;
+function backupMaterialVisual(obj) {
+  if (!obj.material || obj.userData._puzzleMat) return;
   const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
-  obj.userData._puzzleEmissive = mats.map((m) => ({
+  obj.userData._puzzleMat = mats.map((m) => ({
     emissive: m.emissive?.clone?.(),
     emissiveIntensity: m.emissiveIntensity ?? 0,
+    color: m.color?.clone?.(),
   }));
 }
 
-function setPartSnappedVisual(obj, snapped, THREE) {
+function setPartSnappedVisual(obj, snapped) {
   if (!obj.material) return;
-  backupEmissive(obj);
+  backupMaterialVisual(obj);
   const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
-  const backups = obj.userData._puzzleEmissive;
+  const backups = obj.userData._puzzleMat;
   mats.forEach((m, i) => {
-    if (!m.emissive) return;
+    if (!m) return;
     if (snapped) {
-      m.emissive.set(SNAP_COLOR);
-      m.emissiveIntensity = 0.35;
+      if (m.emissive) {
+        m.emissive.set(SNAP_COLOR);
+        m.emissiveIntensity = 0.35;
+      } else if (m.color) {
+        m.color.set(SNAP_COLOR);
+      }
     } else if (backups?.[i]) {
-      if (backups[i].emissive) m.emissive.copy(backups[i].emissive);
-      m.emissiveIntensity = backups[i].emissiveIntensity;
+      if (m.emissive && backups[i].emissive) {
+        m.emissive.copy(backups[i].emissive);
+        m.emissiveIntensity = backups[i].emissiveIntensity;
+      } else if (m.color && backups[i].color) {
+        m.color.copy(backups[i].color);
+      }
     }
     m.needsUpdate = true;
   });
 }
 
 function clearPartVisual(obj) {
-  if (!obj.material || !obj.userData._puzzleEmissive) return;
+  if (!obj.material || !obj.userData._puzzleMat) return;
   const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
-  obj.userData._puzzleEmissive.forEach((bak, i) => {
+  obj.userData._puzzleMat.forEach((bak, i) => {
     const m = mats[i];
-    if (!m?.emissive || !bak.emissive) return;
-    m.emissive.copy(bak.emissive);
-    m.emissiveIntensity = bak.emissiveIntensity;
+    if (!m) return;
+    if (m.emissive && bak.emissive) {
+      m.emissive.copy(bak.emissive);
+      m.emissiveIntensity = bak.emissiveIntensity;
+    } else if (m.color && bak.color) {
+      m.color.copy(bak.color);
+    }
     m.needsUpdate = true;
   });
-  delete obj.userData._puzzleEmissive;
+  delete obj.userData._puzzleMat;
 }
 
 /**
@@ -187,7 +200,10 @@ export function initPuzzleGame({
   function localizePuzzleUi() {
     container.querySelectorAll('[data-i18n]').forEach((el) => {
       const key = el.getAttribute('data-i18n');
-      if (key) el.textContent = t(key);
+      if (!key) return;
+      const text = t(key);
+      if (el.tagName === 'OPTION') el.text = text;
+      else el.textContent = text;
     });
   }
   localizePuzzleUi();
@@ -239,33 +255,42 @@ export function initPuzzleGame({
     clearPartVisual(obj);
   }
 
-  function restoreAll() {
+  function releaseAllParts({ restorePositions = true } = {}) {
     for (const obj of puzzleParts) {
-      const solved = solvedPositions.get(obj.uuid);
-      if (solved) obj.position.copy(solved);
+      if (restorePositions) {
+        const solved = solvedPositions.get(obj.uuid);
+        if (solved) obj.position.copy(solved);
+      }
       unlockPart(obj);
     }
     snapped.clear();
   }
 
-  function stopPuzzle(silent = false) {
-    if (!active) return;
-    active = false;
-    stopTimer();
-    restoreAll();
-    setUiPlaying(false);
-    els.status.textContent = '';
+  function disableEditMode() {
     const mgr = editToolsMgr?.();
     mgr?.setEditMode(false);
+    mgr?.clearSelection?.();
     const toggle = document.getElementById('toggle-edit-mode');
     if (toggle) toggle.checked = false;
-    if (!silent) showToast(t('puzzleStopped'), 'info');
+  }
+
+  function stopPuzzle(silent = false) {
+    const wasActive = active || puzzleParts.length > 0;
+    active = false;
+    stopTimer();
+    releaseAllParts({ restorePositions: true });
+    puzzleParts = [];
+    solvedPositions.clear();
+    setUiPlaying(false);
+    els.status.textContent = '';
+    disableEditMode();
+    if (wasActive && !silent) showToast(t('puzzleStopped'), 'info');
   }
 
   function lockPart(obj) {
     obj.userData.puzzleLocked = true;
     obj.userData.nonSelectable = true;
-    setPartSnappedVisual(obj, true, THREE);
+    setPartSnappedVisual(obj, true);
     snapped.add(obj.uuid);
   }
 
@@ -296,24 +321,30 @@ export function initPuzzleGame({
     stopTimer();
     const elapsed = formatTime(Date.now() - timerStart);
     active = false;
+    releaseAllParts({ restorePositions: false });
+    puzzleParts = [];
+    solvedPositions.clear();
     setUiPlaying(false);
     els.status.textContent = t('puzzleWinTime', { time: elapsed });
     showToast(t('puzzleWin'), 'success');
-    const mgr = editToolsMgr?.();
-    mgr?.setEditMode(false);
-    const toggle = document.getElementById('toggle-edit-mode');
-    if (toggle) toggle.checked = false;
+    disableEditMode();
   }
 
-  function scrambleParts(parts) {
+  function scatterPartsFromSolved(parts) {
     const span = getModelSpan(getModelRoot(), THREE);
     snapThreshold = Math.max(span * 0.07, 0.4);
     for (const obj of parts) {
-      const solved = obj.position.clone();
-      solvedPositions.set(obj.uuid, solved);
+      const solved = solvedPositions.get(obj.uuid);
+      if (!solved) continue;
       snapped.delete(obj.uuid);
       unlockPart(obj);
       obj.position.copy(solved).add(scatterOffset(span, difficulty, THREE));
+    }
+  }
+
+  function captureSolvedPositions(parts) {
+    for (const obj of parts) {
+      solvedPositions.set(obj.uuid, obj.position.clone());
     }
   }
 
@@ -335,9 +366,8 @@ export function initPuzzleGame({
     }
 
     if (active && reshuffleOnly) {
-      for (const obj of puzzleParts) unlockPart(obj);
       snapped.clear();
-      scrambleParts(puzzleParts);
+      scatterPartsFromSolved(puzzleParts);
       startTimer();
       updateHud();
       return;
@@ -351,7 +381,8 @@ export function initPuzzleGame({
     solvedPositions.clear();
     snapped.clear();
 
-    scrambleParts(puzzleParts);
+    captureSolvedPositions(puzzleParts);
+    scatterPartsFromSolved(puzzleParts);
 
     active = true;
     setUiPlaying(true);
