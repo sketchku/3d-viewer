@@ -29,6 +29,9 @@ jobs:
           mkdir site
           cp index.html styles.css bg-pixels-panel.css .nojekyll site/
           cp *.js site/
+          test -f puzzle-game.js
+          test -f site/puzzle-game.js
+          echo "Deployed JS files: $(ls site/*.js | wc -l)"
           if [ -d samples ]; then cp -r samples site/; fi
 
       - name: Setup Pages
