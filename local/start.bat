@@ -3,7 +3,7 @@ echo ========================================
 echo   3D File Viewer - Local Server
 echo ========================================
 echo.
-echo Starting server at http://localhost:8080
+echo Starting server at http://localhost:8080 (or next free port)
 echo Press Ctrl+C to stop.
 echo.
 

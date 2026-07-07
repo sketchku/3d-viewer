@@ -160,9 +160,30 @@ def make_handler(directory: str):
     return ViewerHandler
 
 
-def serve(directory: str, host: str = '127.0.0.1', port: int = 8080):
+class _ReuseTCPServer(socketserver.TCPServer):
+    allow_reuse_address = True
+
+
+def serve(directory: str, host: str = '127.0.0.1', port: int = 8080, max_tries: int = 10):
     handler = make_handler(directory)
-    with socketserver.TCPServer((host, port), handler) as httpd:
-        httpd.allow_reuse_address = True
-        print(f'Serving {directory} at http://{host}:{port}/')
-        httpd.serve_forever()
+    last_err = None
+    for offset in range(max_tries):
+        try_port = port + offset
+        try:
+            httpd = _ReuseTCPServer((host, try_port), handler)
+        except OSError as err:
+            last_err = err
+            if getattr(err, 'winerror', None) == 10048 or err.errno in (48, 98, 10048):
+                continue
+            raise
+        print(f'Serving {directory} at http://{host}:{try_port}/')
+        try:
+            httpd.serve_forever()
+        finally:
+            httpd.server_close()
+        return
+
+    raise OSError(
+        f'Could not bind {host}:{port}-{port + max_tries - 1}. '
+        f'Another process may be using these ports. Last error: {last_err}'
+    )
