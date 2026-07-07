@@ -1,11 +1,19 @@
 /** 3D assembly puzzle — scatter parts and snap them back into place. */
 
+import {
+  pickSplitCount,
+  createSplitSession,
+  restoreSplitSession,
+  findSplittableMeshes,
+} from './puzzle-split.js';
+
 const SNAP_COLOR = 0x34d399;
 const PUZZELED_MAX = 24;
 
 function isPuzzlePart(obj) {
   if (!obj || obj.userData?.nonSelectable) return false;
   if (obj.userData?.multiModelEntry) return false;
+  if (obj.userData?.puzzleSplitHidden) return false;
   return obj.isMesh || obj.isLine || obj.isLineSegments || obj.isLineLoop;
 }
 
@@ -110,6 +118,7 @@ function clearPartVisual(obj) {
  *   getModelRoot: () => import('three').Object3D | null,
  *   getIs2d: () => boolean,
  *   editToolsMgr: () => object | null,
+ *   onPartsChanged?: Function,
  *   t: Function,
  *   showToast: Function,
  * }} opts
@@ -120,6 +129,7 @@ export function initPuzzleGame({
   getModelRoot,
   getIs2d,
   editToolsMgr,
+  onPartsChanged = () => {},
   t,
   showToast,
 }) {
@@ -141,6 +151,8 @@ export function initPuzzleGame({
   let snapThreshold = 1;
   let timerStart = 0;
   let timerId = null;
+  /** @type {ReturnType<typeof createSplitSession> | null} */
+  let splitSession = null;
 
   const hud = document.createElement('div');
   hud.id = 'puzzle-hud';
@@ -274,13 +286,21 @@ export function initPuzzleGame({
     if (toggle) toggle.checked = false;
   }
 
+  function clearSplitSession() {
+    if (!splitSession) return;
+    restoreSplitSession(splitSession.sessions);
+    splitSession = null;
+    onPartsChanged();
+  }
+
   function stopPuzzle(silent = false) {
-    const wasActive = active || puzzleParts.length > 0;
+    const wasActive = active || puzzleParts.length > 0 || splitSession;
     active = false;
     stopTimer();
     releaseAllParts({ restorePositions: true });
     puzzleParts = [];
     solvedPositions.clear();
+    clearSplitSession();
     setUiPlaying(false);
     els.status.textContent = '';
     disableEditMode();
@@ -324,10 +344,39 @@ export function initPuzzleGame({
     releaseAllParts({ restorePositions: false });
     puzzleParts = [];
     solvedPositions.clear();
+    clearSplitSession();
     setUiPlaying(false);
     els.status.textContent = t('puzzleWinTime', { time: elapsed });
     showToast(t('puzzleWin'), 'success');
     disableEditMode();
+  }
+
+  function preparePuzzleParts(root) {
+    let allParts = collectParts(root);
+
+    if (allParts.length < 2) {
+      const targets = findSplittableMeshes(root);
+      if (!targets.length) return { parts: [], split: false };
+
+      const splitCount = pickSplitCount(difficulty);
+      showToast(t('puzzleSplitting', { count: splitCount }), 'info');
+      splitSession = createSplitSession({
+        THREE,
+        root,
+        meshes: targets,
+        partCount: splitCount,
+        label: t,
+      });
+
+      if (!splitSession) return { parts: [], split: false };
+
+      allParts = collectParts(root);
+      onPartsChanged();
+      return { parts: allParts, split: true };
+    }
+
+    const count = pickPartCount(allParts.length, difficulty);
+    return { parts: shuffle(allParts).slice(0, count), split: false };
   }
 
   function scatterPartsFromSolved(parts) {
@@ -359,12 +408,6 @@ export function initPuzzleGame({
       return;
     }
 
-    const allParts = collectParts(root);
-    if (allParts.length < 2) {
-      showToast(t('puzzleNeedParts'), 'error');
-      return;
-    }
-
     if (active && reshuffleOnly) {
       snapped.clear();
       scatterPartsFromSolved(puzzleParts);
@@ -376,8 +419,14 @@ export function initPuzzleGame({
     if (active) stopPuzzle(true);
 
     difficulty = els.diff?.value || 'normal';
-    const count = pickPartCount(allParts.length, difficulty);
-    puzzleParts = shuffle(allParts).slice(0, count);
+    const { parts, split } = preparePuzzleParts(root);
+    if (parts.length < 2) {
+      clearSplitSession();
+      showToast(t('puzzleNeedParts'), 'error');
+      return;
+    }
+
+    puzzleParts = parts;
     solvedPositions.clear();
     snapped.clear();
 
@@ -395,6 +444,9 @@ export function initPuzzleGame({
     if (toggle) toggle.checked = true;
 
     startTimer();
+    if (split) {
+      showToast(t('puzzleSplitDone', { count: puzzleParts.length }), 'success');
+    }
     showToast(t('puzzleStarted', { count: puzzleParts.length }), 'info');
   }
 

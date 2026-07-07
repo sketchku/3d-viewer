@@ -124,6 +124,7 @@ export function initSidebarDock(opts = {}) {
     getModelRoot = () => null,
     getIs2d = () => false,
     editToolsMgr = () => null,
+    onPuzzlePartsChanged = () => {},
   } = opts;
 
   const app = document.getElementById('app');
@@ -154,8 +155,9 @@ export function initSidebarDock(opts = {}) {
     THREE,
     getModelRoot,
     getIs2d,
-    editToolsMgr,
-  });
+      editToolsMgr,
+      onPuzzlePartsChanged,
+    });
 
   function isEntryOpen(entry) {
     return entry?.popup && !entry.popup.classList.contains('hidden');

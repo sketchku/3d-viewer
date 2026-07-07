@@ -14,6 +14,7 @@ import { initPuzzleGame } from './puzzle-game.js';
  *   getModelRoot?: Function,
  *   getIs2d?: Function,
  *   editToolsMgr?: Function,
+ *   onPuzzlePartsChanged?: Function,
  * }} opts
  */
 export function initLabFeatures({
@@ -25,6 +26,7 @@ export function initLabFeatures({
   getModelRoot = () => null,
   getIs2d = () => false,
   editToolsMgr = () => null,
+  onPuzzlePartsChanged = () => {},
 }) {
   const bgMount = document.getElementById('bg-pixels-controls');
   const settingsMount = document.getElementById('bg-settings-controls');
@@ -60,6 +62,7 @@ export function initLabFeatures({
     getModelRoot,
     getIs2d,
     editToolsMgr,
+    onPartsChanged: onPuzzlePartsChanged,
     t,
     showToast,
   });

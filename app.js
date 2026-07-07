@@ -41,7 +41,7 @@ import {
 } from './cad-step-convert.js?v=2.5.0';
 import { isStaticWebDeployment } from './web-config.js?v=2.5.0';
 import { createBgPixels, loadBgFromStorage } from './bg-pixels.js?v=2.10.0';
-import { initSidebarDock } from './sidebar-dock.js?v=2.11.1';
+import { initSidebarDock } from './sidebar-dock.js?v=2.12.0';
 import { initSpaceTravelUI } from './space-travel-ui.js?v=2.10.5';
 import { initColorPicker } from './color-picker.js?v=2.6.7';
 
@@ -571,6 +571,9 @@ async function init() {
     },
     getIs2d: () => !!modelGroup.userData.is2d,
     editToolsMgr: () => editToolsMgr,
+    onPuzzlePartsChanged: () => {
+      partTreeMgr?.refresh(modelGroup.userData.is2d ? 'layers' : 'parts');
+    },
   });
   puzzleGameMgr = sidebarDockApi.puzzleGame?.() ?? null;
   animate();
