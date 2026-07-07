@@ -2,6 +2,7 @@
 
 import { initBgPixelsUI } from './bg-pixels-ui.js';
 import { initBgSettingsUI } from './bg-settings-ui.js';
+import { initPuzzleGame } from './puzzle-game.js';
 
 /**
  * @param {{
@@ -9,6 +10,10 @@ import { initBgSettingsUI } from './bg-settings-ui.js';
  *   t?: Function,
  *   showToast?: Function,
  *   onSpaceTravelChange?: Function,
+ *   THREE?: object,
+ *   getModelRoot?: Function,
+ *   getIs2d?: Function,
+ *   editToolsMgr?: Function,
  * }} opts
  */
 export function initLabFeatures({
@@ -16,6 +21,10 @@ export function initLabFeatures({
   t = (key) => key,
   showToast = () => {},
   onSpaceTravelChange = () => {},
+  THREE = null,
+  getModelRoot = () => null,
+  getIs2d = () => false,
+  editToolsMgr = () => null,
 }) {
   const bgMount = document.getElementById('bg-pixels-controls');
   const settingsMount = document.getElementById('bg-settings-controls');
@@ -45,7 +54,20 @@ export function initLabFeatures({
     settingsUi?.syncFromSettings?.();
   });
 
-  return { syncSettings: () => settingsUi?.syncFromSettings?.() };
+  const puzzleGame = initPuzzleGame({
+    THREE,
+    container: document.getElementById('puzzle-game-controls'),
+    getModelRoot,
+    getIs2d,
+    editToolsMgr,
+    t,
+    showToast,
+  });
+
+  return {
+    syncSettings: () => settingsUi?.syncFromSettings?.(),
+    puzzleGame,
+  };
 }
 
 /** @deprecated Use initLabFeatures */

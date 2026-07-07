@@ -41,7 +41,7 @@ import {
 } from './cad-step-convert.js?v=2.5.0';
 import { isStaticWebDeployment } from './web-config.js?v=2.5.0';
 import { createBgPixels, loadBgFromStorage } from './bg-pixels.js?v=2.10.0';
-import { initSidebarDock } from './sidebar-dock.js?v=2.10.5';
+import { initSidebarDock } from './sidebar-dock.js?v=2.11.0';
 import { initSpaceTravelUI } from './space-travel-ui.js?v=2.10.5';
 import { initColorPicker } from './color-picker.js?v=2.6.7';
 
@@ -304,6 +304,7 @@ let partTreeMgr = null;
 let modelTabsMgr = null;
 let multiModelMgr = null;
 let editToolsMgr = null;
+let puzzleGameMgr = null;
 let colorPickerMgr = null;
 let currentLoadGroup = null;
 
@@ -536,6 +537,7 @@ async function init() {
     onStructureChange: () => {
       updateStats();
       partTreeMgr?.refresh(modelGroup.userData.is2d ? 'layers' : 'parts');
+      puzzleGameMgr?.onStructureChange?.();
     },
   });
   viewerFeatures = initViewerFeatures({
@@ -561,7 +563,16 @@ async function init() {
     t,
     showToast,
     onSpaceTravelChange: applySpaceTravelMode,
+    THREE,
+    getModelRoot: () => {
+      const active = multiModelMgr?.getActiveEntry();
+      if (active) return active.group;
+      return modelGroup;
+    },
+    getIs2d: () => !!modelGroup.userData.is2d,
+    editToolsMgr: () => editToolsMgr,
   });
+  puzzleGameMgr = sidebarDockApi.puzzleGame?.() ?? null;
   animate();
 
   if (location.protocol === 'file:') {
@@ -1072,6 +1083,7 @@ async function loadFile(file, options = {}) {
 
     updateStats();
     editToolsMgr?.onModelLoaded();
+    puzzleGameMgr?.onModelLoaded?.();
     saveRecentFile(file.name, ext, buffer);
     recentFilesMgr?.refresh();
     document.getElementById('btn-add-model')?.classList.toggle('hidden', modelGroup.children.length === 0);
@@ -1487,6 +1499,7 @@ function clearModel({ dispose = true } = {}) {
   updatePixelBackground(null);
   viewerFeatures?.onModelCleared();
   editToolsMgr?.onModelCleared();
+  puzzleGameMgr?.onModelCleared?.();
   partTreeMgr?.clear();
   document.getElementById('btn-add-model')?.classList.add('hidden');
 }

@@ -120,6 +120,10 @@ export function initSidebarDock(opts = {}) {
     t = (key) => key,
     showToast = () => {},
     onSpaceTravelChange = () => {},
+    THREE = null,
+    getModelRoot = () => null,
+    getIs2d = () => false,
+    editToolsMgr = () => null,
   } = opts;
 
   const app = document.getElementById('app');
@@ -144,7 +148,16 @@ export function initSidebarDock(opts = {}) {
 
   let labApi = null;
   if (bgPixels) {
-    labApi = initLabFeatures({ bgPixels, t, showToast, onSpaceTravelChange });
+    labApi = initLabFeatures({
+      bgPixels,
+      t,
+      showToast,
+      onSpaceTravelChange,
+      THREE,
+      getModelRoot,
+      getIs2d,
+      editToolsMgr,
+    });
   }
 
   function isEntryOpen(entry) {
@@ -334,5 +347,6 @@ export function initSidebarDock(opts = {}) {
     openById,
     setTreeButtonVisible: setTreeSectionVisible,
     syncLabSettings: () => labApi?.syncSettings?.(),
+    puzzleGame: () => labApi?.puzzleGame,
   };
 }
